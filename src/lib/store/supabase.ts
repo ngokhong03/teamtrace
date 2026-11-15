@@ -56,6 +56,9 @@ const toReview = (r: any): Review => ({
 export function createSupabaseStore(url: string, serviceKey: string): Store {
   const db: SupabaseClient = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    // Next.js 14 tự cache mọi fetch() phía server -> đọc lại sẽ ra dữ liệu cũ sau khi ghi.
+    // Bắt buộc tắt cache cho các truy vấn Supabase.
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
   });
 
   return {
