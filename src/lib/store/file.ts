@@ -85,9 +85,18 @@ export function createFileStore(): Store {
           isLeader: input.isLeader,
           token: randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, ""),
           joinedAt: new Date().toISOString(),
+          pinHash: input.pinHash,
+          failedAttempts: 0,
+          lockedUntil: null,
         };
         db.members.push(member);
         return member;
+      }),
+
+    updateMember: (projectId, memberId, patch) =>
+      mutate((db) => {
+        const m = db.members.find((x) => x.projectId === projectId && x.id === memberId);
+        if (m) Object.assign(m, patch);
       }),
 
     getMember: (projectId, memberId) =>

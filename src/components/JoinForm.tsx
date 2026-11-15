@@ -18,6 +18,7 @@ export default function JoinForm({
 }) {
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
+  const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,7 +28,7 @@ export default function JoinForm({
     setError("");
     try {
       const r = await api<{ memberId: string; token: string; name: string }>(`/api/projects/${code}/join`, {
-        body: { name, studentId },
+        body: { name, studentId, pin },
       });
       const s = { memberId: r.memberId, token: r.token, name: r.name };
       saveSession(code, s);
@@ -49,12 +50,28 @@ export default function JoinForm({
       <Field label="Họ và tên" required>
         <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nguyễn Văn A" autoComplete="name" required />
       </Field>
+      <Field label="Mã sinh viên" required>
+        <input className={inputCls} name="studentId" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="VD: 2311110001" required />
+      </Field>
       <Field
-        label="Mã sinh viên"
+        label="Mã PIN (4–6 chữ số)"
         required
-        hint="Dùng để vào lại dự án trên thiết bị khác – hãy nhập đúng mã của bạn."
+        hint="Lần đầu: tự đặt PIN và nhớ nó. Vào lại trên thiết bị khác: nhập đúng PIN đã đặt. Sai 5 lần sẽ bị khoá 10 phút."
       >
-        <input className={inputCls} value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="VD: 2311110001" required />
+        <input
+          className={inputCls}
+          name="pin"
+          type="password"
+          inputMode="numeric"
+          autoComplete="off"
+          pattern="\d{4,6}"
+          minLength={4}
+          maxLength={6}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          placeholder="••••"
+          required
+        />
       </Field>
       {error && <Alert tone="error">{error}</Alert>}
       <Button type="submit" loading={busy} className="w-full" size="lg">

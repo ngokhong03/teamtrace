@@ -11,26 +11,37 @@ const j = async (path, { method, body, s } = {}) => {
 const assert = (c, m) => { if (!c) { console.log("FAIL:", m); process.exitCode = 1; } else console.log("ok  :", m); };
 
 const dl = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
-const c = await j("/api/projects", { body: { name: "[TEST] xoá được", course: "Marketing căn bản", deadline: dl, leaderName: "Minh Anh", leaderStudentId: "K65001" } });
+const c = await j("/api/projects", { body: { name: "[TEST] xoá được", course: "Marketing căn bản", deadline: dl, leaderName: "Minh Anh", leaderStudentId: "K65001", leaderPin: "1234" } });
 assert(c.status === 200 && /^\d{6}$/.test(c.data.code), "tạo project, mã 6 số: " + c.data.code);
 const code = c.data.code;
 const A = { memberId: c.data.memberId, token: c.data.token };
 // Đọc trạng thái TRƯỚC khi ghi: bắt lỗi cache đọc-sau-ghi (Next.js fetch cache)
 await j(`/api/projects/${code}/state`, { s: A });
 
-const jb = await j(`/api/projects/${code}/join`, { body: { name: "Anh Thư", studentId: "K65002" } });
-const jc = await j(`/api/projects/${code}/join`, { body: { name: "Gia Huy", studentId: "K65003" } });
-const jd = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004" } });
+const jb = await j(`/api/projects/${code}/join`, { body: { name: "Anh Thư", studentId: "K65002", pin: "1234" } });
+const jc = await j(`/api/projects/${code}/join`, { body: { name: "Gia Huy", studentId: "K65003", pin: "1234" } });
+const jd = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "1234" } });
 const Bm = jb.data, C = jc.data, D = jd.data;
 assert(jb.status === 200 && jc.status === 200 && jd.status === 200, "3 thành viên join");
-const re = await j(`/api/projects/${code}/join`, { body: { name: "xx", studentId: "k65002" } }); // ok
+const re = await j(`/api/projects/${code}/join`, { body: { name: "xx", studentId: "k65002", pin: "1234" } }); // ok
 assert(re.data.memberId === Bm.memberId && re.data.rejoined, "rejoin bằng MSSV (không phân biệt hoa thường)");
 
+let r;
+// ---- PIN ----
+r = await j(`/api/projects/${code}/join`, { body: { name: "Ai Do", studentId: "K65002", pin: "9999" } });
+assert(r.status === 401 && /còn 4 lần/.test(r.data.error), "sai PIN -> 401, còn 4 lần: " + r.data.error);
+r = await j(`/api/projects/${code}/join`, { body: { name: "Ai Do", studentId: "K65002", pin: "12" } });
+assert(r.status === 400, "PIN quá ngắn -> 400");
+r = await j(`/api/projects/${code}/join`, { body: { name: "Ai Do", studentId: "K65002", pin: "abcd" } });
+assert(r.status === 400, "PIN không phải số -> 400");
+r = await j(`/api/projects/${code}/join`, { body: { name: "Anh Thư", studentId: "K65002", pin: "1234" } });
+assert(r.status === 200 && r.data.memberId === Bm.memberId, "đúng PIN -> vào lại, reset đếm sai");
+r = await j("/api/projects", { body: { name: "x y", course: "", deadline: "", leaderName: "No Pin", leaderStudentId: "ZZZ1" } });
+assert(r.status === 400, "tạo nhóm không có PIN -> 400");
 const bad = await j(`/api/projects/${code}/state`, { s: { memberId: A.memberId, token: "sai" } });
 assert(bad.status === 401, "token sai -> 401");
 
 const log = (s, o) => j(`/api/projects/${code}/logs`, { body: { category: "Nghiên cứu", workDate: today, ...o }, s });
-let r;
 r = await log(A, { task: "Khảo sát đối thủ", description: "Khảo sát 5 đối thủ, lập bảng so sánh giá và kênh phân phối, rút ra 3 khoảng trống thị trường để định vị.", link: "https://docs.google.com/d/1", hours: 6, percent: 100 });
 assert(r.status === 200, "log A1");
 r = await log(A, { task: "Slide", description: "Thiết kế 12 slide thuyết trình bằng Canva, thống nhất bộ nhận diện và biểu đồ.", link: "canva.com/design/x", category: "Thiết kế", hours: 5, percent: 90 });
@@ -83,4 +94,10 @@ assert(an.status === 403, "member thường không chạy được AI -> 403");
 const an2 = await j(`/api/projects/${code}/analyze`, { method: "POST", body: {}, s: A });
 assert(an2.status === 400, "leader chạy AI khi chưa có key -> 400 thông báo rõ: " + an2.data.error);
 
+// ---- Khoá sau 5 lần sai (dùng riêng tài khoản D, đặt cuối) ----
+let last;
+for (let i = 0; i < 5; i++) last = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "0000" } });
+assert(last.status === 429, "sai 5 lần -> khoá 429: " + last.data.error);
+r = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "1234" } });
+assert(r.status === 429, "đang khoá: đúng PIN vẫn bị chặn");
 console.log("CODE", code);

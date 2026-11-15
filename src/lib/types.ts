@@ -32,6 +32,16 @@ export interface Member {
   token: string;
   isLeader: boolean;
   joinedAt: string;
+  /** "salt:hash" (scrypt). null = tài khoản cũ chưa có PIN, sẽ được đặt PIN ở lần vào lại. */
+  pinHash: string | null;
+  failedAttempts: number;
+  lockedUntil: string | null;
+}
+
+export interface MemberPatch {
+  pinHash?: string;
+  failedAttempts?: number;
+  lockedUntil?: string | null;
 }
 
 export interface WorkLog {
@@ -81,7 +91,11 @@ export interface Store {
   getProjectByCode(code: string): Promise<Project | null>;
   setAnalysis(projectId: string, analysis: AiAnalysis): Promise<void>;
 
-  addMember(projectId: string, input: { name: string; studentId: string; isLeader: boolean }): Promise<Member>;
+  addMember(
+    projectId: string,
+    input: { name: string; studentId: string; isLeader: boolean; pinHash: string }
+  ): Promise<Member>;
+  updateMember(projectId: string, memberId: string, patch: MemberPatch): Promise<void>;
   getMember(projectId: string, memberId: string): Promise<Member | null>;
   findMemberByStudentId(projectId: string, studentId: string): Promise<Member | null>;
   listMembers(projectId: string): Promise<Member[]>;

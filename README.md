@@ -31,6 +31,8 @@ Mở http://localhost:3000. Khi chưa có biến môi trường Supabase, app t�
    
    ⚠️ `service_role` là khóa bí mật, chỉ dán vào Vercel, **không** commit lên GitHub, không gửi vào nhóm chat.
 
+> **Đã deploy bản cũ (trước khi có PIN)?** Chạy thêm file [`supabase/migrations/001_pin.sql`](supabase/migrations/001_pin.sql) trong SQL Editor **trước** khi push bản mới. Tài khoản cũ chưa có PIN sẽ nhận PIN đầu tiên họ nhập khi vào lại.
+
 ### Bước 2 – Đưa code lên GitHub (3 phút)
 ```bash
 git init && git add . && git commit -m "TeamTrace MVP"
@@ -61,7 +63,7 @@ git push -u origin main
 
 ## Luồng sử dụng cho sinh viên
 1. **Trưởng nhóm** vào trang chủ → *Tạo nhóm mới* (tên dự án, môn, deadline, tên + MSSV) → nhận **mã 6 số** và link mời.
-2. **Thành viên** mở link (hoặc nhập mã) → nhập Tên + MSSV → vào dự án. Vào lại trên máy khác bằng đúng MSSV.
+2. **Thành viên** mở link (hoặc nhập mã) → nhập Tên + MSSV + **PIN 4–6 số tự đặt** → vào dự án. Vào lại trên máy khác bằng đúng MSSV + PIN.
 3. Trong quá trình làm: tab **Ghi nhận** – điền đầu việc, mô tả, link minh chứng (Docs/Canva/Slides/GitHub…), số giờ, % hoàn thành.
 4. Cuối dự án: tab **Đánh giá** – chấm 1–5 sao × 3 tiêu chí cho từng bạn + nhận xét (ẩn danh, chỉ nộp 1 lần).
 5. Tab **Báo cáo**: bảng xếp hạng, % đóng góp, radar, AI Insights; nút **Sao chép tóm tắt** / **In / Lưu PDF** để nộp kèm bài.
@@ -84,7 +86,8 @@ git push -u origin main
 - Khi gọi Claude, tên thật được thay bằng "Thành viên A, B, C…".
 
 ## Giới hạn đã biết (pilot)
-- **Không có mật khẩu**: ai biết mã nhóm + MSSV của bạn có thể vào với danh nghĩa bạn. Chấp nhận được cho pilot trong lớp; bản thật nên thêm PIN hoặc đăng nhập email trường.
+- **PIN thay cho mật khẩu**: PIN 4–6 số được băm (scrypt + salt), sai 5 lần liên tiếp thì khoá tài khoản 10 phút. Chưa có chức năng quên PIN: nếu sinh viên quên, cần xoá/sửa dòng `pin_hash` của thành viên đó trong Supabase (đặt về null để họ đặt PIN mới).
+- Chưa giới hạn số lần thử theo địa chỉ IP, và mã nhóm 6 số vẫn có thể bị dò; PIN chỉ bảo vệ từng tài khoản.
 - Chưa có quản trị viên/giảng viên riêng, chưa có đóng/mở giai đoạn đánh giá; chưa tự xóa dữ liệu theo thời hạn.
 - Dữ liệu sinh viên (tên, MSSV) được lưu trên Supabase: nên thông báo và xin đồng ý của sinh viên tham gia pilot.
 

@@ -19,6 +19,9 @@ create table if not exists members (
   token text not null,
   is_leader boolean not null default false,
   joined_at timestamptz not null default now(),
+  pin_hash text,                          -- scrypt "salt:hash"; null = tài khoản cũ chưa có PIN
+  failed_attempts int not null default 0, -- số lần nhập sai PIN liên tiếp
+  locked_until timestamptz,               -- khoá tạm sau khi sai quá nhiều lần
   unique (project_id, student_id)
 );
 

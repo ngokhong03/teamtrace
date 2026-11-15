@@ -8,7 +8,7 @@ import { api, saveSession } from "@/lib/client";
 
 export default function CreateProjectForm() {
   const router = useRouter();
-  const [f, setF] = useState({ name: "", course: "", deadline: "", leaderName: "", leaderStudentId: "" });
+  const [f, setF] = useState({ name: "", course: "", deadline: "", leaderName: "", leaderStudentId: "", leaderPin: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
@@ -48,6 +48,22 @@ export default function CreateProjectForm() {
           <input className={inputCls} value={f.leaderStudentId} onChange={set("leaderStudentId")} placeholder="2311110001" required />
         </Field>
       </div>
+      <Field label="Mã PIN của bạn (4–6 chữ số)" required hint="Dùng để vào lại dự án trên thiết bị khác. Hãy nhớ PIN này.">
+        <input
+          className={inputCls}
+          name="leaderPin"
+          type="password"
+          inputMode="numeric"
+          autoComplete="off"
+          pattern="\d{4,6}"
+          minLength={4}
+          maxLength={6}
+          value={f.leaderPin}
+          onChange={(e) => setF({ ...f, leaderPin: e.target.value.replace(/\D/g, "") })}
+          placeholder="••••"
+          required
+        />
+      </Field>
       {error && <Alert tone="error">{error}</Alert>}
       <Button type="submit" loading={busy} className="w-full" size="lg">
         <Rocket className="h-4 w-4" /> Tạo dự án & lấy mã nhóm

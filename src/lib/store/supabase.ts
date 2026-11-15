@@ -27,6 +27,9 @@ const toMember = (r: any): Member => ({
   token: r.token,
   isLeader: r.is_leader,
   joinedAt: r.joined_at,
+  pinHash: r.pin_hash ?? null,
+  failedAttempts: r.failed_attempts ?? 0,
+  lockedUntil: r.locked_until ?? null,
 });
 
 const toLog = (r: any): WorkLog => ({
@@ -91,10 +94,20 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
           student_id: input.studentId,
           is_leader: input.isLeader,
           token: randomBytes(24).toString("hex"),
+          pin_hash: input.pinHash,
         })
         .select()
         .single();
       return toMember(check(res, "addMember"));
+    },
+
+    async updateMember(projectId, memberId, patch) {
+      const row: Record<string, unknown> = {};
+      if (patch.pinHash !== undefined) row.pin_hash = patch.pinHash;
+      if (patch.failedAttempts !== undefined) row.failed_attempts = patch.failedAttempts;
+      if (patch.lockedUntil !== undefined) row.locked_until = patch.lockedUntil;
+      const res = await db.from("members").update(row).eq("project_id", projectId).eq("id", memberId);
+      check({ data: true, error: res.error }, "updateMember");
     },
 
     async getMember(projectId, memberId) {

@@ -1,6 +1,7 @@
 import { randomInt } from "crypto";
 import { getStore } from "@/lib/store";
 import { HttpError, isoDate, readJson, route, str } from "@/lib/http";
+import { hashPin, parsePin } from "@/lib/pin";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export const POST = route(async (req: Request) => {
   const deadline = isoDate(body.deadline, "Deadline", true);
   const leaderName = str(body.leaderName, "Họ tên", { min: 2, max: 60 });
   const leaderStudentId = str(body.leaderStudentId, "Mã sinh viên", { min: 3, max: 30 });
+  const leaderPin = parsePin(body.leaderPin);
 
   const store = getStore();
   let code = "";
@@ -25,6 +27,11 @@ export const POST = route(async (req: Request) => {
   if (!code) throw new HttpError(500, "Không tạo được mã dự án, vui lòng thử lại");
 
   const project = await store.createProject({ code, name, course, deadline });
-  const leader = await store.addMember(project.id, { name: leaderName, studentId: leaderStudentId, isLeader: true });
+  const leader = await store.addMember(project.id, {
+    name: leaderName,
+    studentId: leaderStudentId,
+    isLeader: true,
+    pinHash: hashPin(leaderPin),
+  });
   return { code, memberId: leader.id, token: leader.token, name: leader.name };
 });

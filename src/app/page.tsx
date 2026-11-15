@@ -44,7 +44,7 @@ export default function Home() {
           </p>
           <ul className="mt-6 space-y-3">
             {[
-              [Users, "Vào nhóm trong 10 giây", "Chỉ cần mã 6 số + tên + mã sinh viên, không cần tài khoản."],
+              [Users, "Vào nhóm trong 10 giây", "Mã nhóm 6 số + tên + mã sinh viên + PIN tự đặt, không cần email hay mật khẩu."],
               [EyeOff, "Đánh giá chéo ẩn danh thật sự", "Hệ thống không lưu ai chấm ai, nên ai cũng dám nói thật."],
               [Sparkles, "Báo cáo đóng góp có AI", "Điểm 0–100, biểu đồ 5 trục và gợi ý cải thiện cho từng người."],
             ].map(([Icon, title, desc]) => {
@@ -104,7 +104,7 @@ export default function Home() {
                 Tiếp tục <ArrowRight className="h-4 w-4" />
               </Button>
               <p className="text-center text-xs text-slate-500">
-                Đã tham gia trước đó? Nhập lại mã nhóm và đúng mã sinh viên để vào lại.
+                Đã tham gia trước đó? Nhập lại mã nhóm, đúng mã sinh viên và mã PIN bạn đã đặt để vào lại.
               </p>
             </form>
           ) : (
