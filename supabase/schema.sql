@@ -1,0 +1,67 @@
+-- TeamTrace – Supabase schema. Chạy toàn bộ file này trong Supabase > SQL Editor.
+create extension if not exists pgcrypto;
+
+create table if not exists projects (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  name text not null,
+  course text not null default '',
+  deadline date,
+  analysis jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists members (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  name text not null,
+  student_id text not null,
+  token text not null,
+  is_leader boolean not null default false,
+  joined_at timestamptz not null default now(),
+  unique (project_id, student_id)
+);
+
+create table if not exists work_logs (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  member_id uuid not null references members(id) on delete cascade,
+  task text not null,
+  description text not null default '',
+  link text not null default '',
+  category text not null default 'Khác',
+  hours numeric(5,2) not null check (hours >= 0 and hours <= 40),
+  percent int not null check (percent between 0 and 100),
+  work_date date not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists work_logs_project_idx on work_logs(project_id);
+
+-- Ai đã nộp đánh giá (chỉ để chống nộp 2 lần + biết tiến độ)
+create table if not exists review_submissions (
+  project_id uuid not null references projects(id) on delete cascade,
+  reviewer_id uuid not null references members(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (project_id, reviewer_id)
+);
+
+-- Nội dung đánh giá: CỐ Ý không có cột người chấm và không có timestamp
+-- => không thể truy ngược ai chấm ai, kể cả khi đọc trực tiếp database.
+create table if not exists reviews (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  reviewee_id uuid not null references members(id) on delete cascade,
+  responsibility smallint not null check (responsibility between 1 and 5),
+  quality smallint not null check (quality between 1 and 5),
+  collaboration smallint not null check (collaboration between 1 and 5),
+  comment text not null default ''
+);
+create index if not exists reviews_project_idx on reviews(project_id);
+
+-- Bật RLS và KHÔNG tạo policy nào: trình duyệt không thể đọc/ghi trực tiếp.
+-- Chỉ server Next.js (service_role key) truy cập được.
+alter table projects enable row level security;
+alter table members enable row level security;
+alter table work_logs enable row level security;
+alter table review_submissions enable row level security;
+alter table reviews enable row level security;
