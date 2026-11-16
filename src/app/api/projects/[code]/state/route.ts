@@ -4,8 +4,8 @@ import type { StateResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const GET = route(async (req: Request, ctx: { params: { code: string } }): Promise<StateResponse> => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const GET = route(async (req: Request, p: { code: string }): Promise<StateResponse> => {
+  const { project, member } = await authenticate(req, p.code);
   const store = getStore();
   const [members, logs, submitted, tasks] = await Promise.all([
     store.listMembers(project.id),

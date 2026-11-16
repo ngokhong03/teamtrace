@@ -1,8 +1,58 @@
 "use client";
 
 import { Loader2, Star } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn, colorFor, initials } from "@/lib/utils";
+
+/**
+ * Xác nhận bằng 2 lần bấm thay cho window.confirm() – hộp thoại confirm/prompt
+ * hay bị chặn trong trình duyệt nhúng của Zalo, Facebook, Messenger.
+ * Lần bấm đầu "lên đạn" theo id, tự huỷ sau vài giây.
+ */
+export function useArmed(timeoutMs = 4000) {
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(null), timeoutMs);
+    return () => clearTimeout(t);
+  }, [armed, timeoutMs]);
+  return { armed, arm: setArmed };
+}
+
+/** Hiện nội dung để người dùng tự sao chép khi trình duyệt chặn clipboard (thay cho prompt()). */
+export function CopyFallback({ text, onClose }: { text: string; onClose: () => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  return (
+    <div className="no-print rounded-xl border border-amber-200 bg-amber-50 p-3">
+      <p className="mb-2 text-sm text-amber-900">Trình duyệt không cho sao chép tự động. Hãy giữ để chọn và sao chép nội dung dưới đây:</p>
+      <textarea
+        ref={ref}
+        readOnly
+        value={text}
+        aria-label="Nội dung để sao chép"
+        className="h-32 w-full rounded-lg border border-amber-200 bg-white p-2 font-mono text-xs text-slate-800"
+        onFocus={(e) => e.currentTarget.select()}
+      />
+      <button onClick={onClose} className="mt-2 text-sm font-semibold text-amber-900 underline">
+        Đóng
+      </button>
+    </div>
+  );
+}
+
+/** Sao chép vào clipboard; trả về false nếu trình duyệt không cho phép. */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cn("rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5", className)}>{children}</div>;

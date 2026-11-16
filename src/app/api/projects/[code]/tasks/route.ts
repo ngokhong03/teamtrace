@@ -10,8 +10,8 @@ const MAX_TASKS = 200;
  * - Trưởng nhóm: giao cho bất kỳ thành viên nào.
  * - Thành viên thường: chỉ được tự nhận việc cho chính mình.
  */
-export const POST = route(async (req: Request, ctx: { params: { code: string } }) => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const POST = route(async (req: Request, p: { code: string }) => {
+  const { project, member } = await authenticate(req, p.code);
   const store = getStore();
   const body = await readJson(req);
 

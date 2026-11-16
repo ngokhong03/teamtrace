@@ -4,7 +4,7 @@ import { TASK_STATUSES, type TaskPatch, type TaskStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type Ctx = { params: { code: string; id: string } };
+type Ctx = { code: string; id: string };
 
 /**
  * Cập nhật nhiệm vụ.
@@ -12,10 +12,10 @@ type Ctx = { params: { code: string; id: string } };
  * - Sửa tên / mô tả / hạn: trưởng nhóm hoặc người tạo việc.
  * - Đổi người được giao: chỉ trưởng nhóm.
  */
-export const PATCH = route(async (req: Request, ctx: Ctx) => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const PATCH = route(async (req: Request, p: Ctx) => {
+  const { project, member } = await authenticate(req, p.code);
   const store = getStore();
-  const task = await store.getTask(project.id, ctx.params.id);
+  const task = await store.getTask(project.id, p.id);
   if (!task) throw new HttpError(404, "Không tìm thấy nhiệm vụ");
   const body = await readJson(req);
 
@@ -54,10 +54,10 @@ export const PATCH = route(async (req: Request, ctx: Ctx) => {
 });
 
 /** Xoá nhiệm vụ: trưởng nhóm hoặc người tạo việc. */
-export const DELETE = route(async (req: Request, ctx: Ctx) => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const DELETE = route(async (req: Request, p: Ctx) => {
+  const { project, member } = await authenticate(req, p.code);
   const store = getStore();
-  const task = await store.getTask(project.id, ctx.params.id);
+  const task = await store.getTask(project.id, p.id);
   if (!task) throw new HttpError(404, "Không tìm thấy nhiệm vụ");
   if (!member.isLeader && task.createdBy !== member.id) {
     throw new HttpError(403, "Chỉ trưởng nhóm hoặc người tạo việc mới được xoá nhiệm vụ");

@@ -8,7 +8,8 @@ import Timeline from "@/components/Timeline";
 import HoursChart from "@/components/HoursChart";
 import { MyTasksCard, TeamTasksCard } from "@/components/Tasks";
 import AdSlot from "@/components/AdSlot";
-import { Alert, Avatar, Badge, Button, Card, PageTitle } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, Card, CopyFallback, PageTitle, copyText } from "@/components/ui";
+import { hasLink } from "@/lib/scoring";
 import { fmtNum, formatDate } from "@/lib/utils";
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub?: string }) {
@@ -27,6 +28,7 @@ export default function OverviewPage() {
   const { code, data } = useProject();
   const [copied, setCopied] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [fallback, setFallback] = useState<string | null>(null);
   const nameOf = (id: string) => data.members.find((m) => m.id === id)?.name ?? "Thành viên";
 
   const totalHours = data.logs.reduce((s, l) => s + l.hours, 0);
@@ -34,18 +36,17 @@ export default function OverviewPage() {
 
   const chart = data.members.map((m) => {
     const mine = data.logs.filter((l) => l.memberId === m.id);
-    const effective = mine.reduce((s, l) => s + (l.hours * l.percent) / 100, 0);
+    const effective = mine.reduce((s, l) => s + ((l.hours * l.percent) / 100) * (hasLink(l) ? 1 : 0.6), 0);
     return { name: m.name, hours: mine.reduce((s, l) => s + l.hours, 0), effective: Math.round(effective * 10) / 10 };
   });
 
   const link = typeof window !== "undefined" ? `${location.origin}/p/${code}` : "";
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link);
+    if (await copyText(link)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      prompt("Sao chép link này:", link);
+    } else {
+      setFallback(link);
     }
   }
 
@@ -86,8 +87,13 @@ export default function OverviewPage() {
             </Button>
           </div>
           <p className="mt-2 text-sm text-slate-500">
-            Gửi link hoặc mã này cho thành viên – họ chỉ cần nhập Tên + Mã sinh viên là vào được.
+            Gửi link hoặc mã này cho thành viên – họ nhập Tên, Mã sinh viên và tự đặt mã PIN là vào được.
           </p>
+          {fallback && (
+            <div className="mt-3">
+              <CopyFallback text={fallback} onClose={() => setFallback(null)} />
+            </div>
+          )}
         </Card>
         <Card>
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
@@ -100,7 +106,7 @@ export default function OverviewPage() {
 
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat icon={Users} label="Thành viên" value={String(data.members.length)} sub={`${data.members.filter((m) => m.submitted).length} đã nộp đánh giá`} />
-        <Stat icon={ClipboardList} label="Đầu việc" value={String(data.logs.length)} />
+        <Stat icon={ClipboardList} label="Việc đã ghi nhận" value={String(data.logs.length)} sub={`${data.tasks.filter((t) => t.status === "done").length}/${data.tasks.length} nhiệm vụ xong`} />
         <Stat icon={Clock} label="Tổng giờ làm" value={fmtNum(Math.round(totalHours * 10) / 10)} />
         <Stat icon={Target} label="Hoàn thành TB" value={`${avgPct}%`} />
       </div>

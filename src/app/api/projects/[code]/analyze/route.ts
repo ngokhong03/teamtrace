@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Claude có thể mất vài chục giây
 
 /** Chạy phân tích bằng Claude và lưu kết quả. Chỉ trưởng nhóm được gọi; tối đa 1 lần / 60 giây. */
-export const POST = route(async (req: Request, ctx: { params: { code: string } }) => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const POST = route(async (req: Request, p: { code: string }) => {
+  const { project, member } = await authenticate(req, p.code);
   if (!member.isLeader) throw new HttpError(403, "Chỉ trưởng nhóm mới được chạy phân tích AI");
   if (!claudeAvailable()) throw new HttpError(400, "Chưa cấu hình ANTHROPIC_API_KEY – đang dùng phân tích heuristic có sẵn");
 

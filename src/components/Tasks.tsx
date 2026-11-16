@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CalendarClock, CheckCircle2, ClipboardList, Circle, PlayCircle, Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useProject } from "./ProjectProvider";
-import { Alert, Avatar, Badge, Button, Card, Field, ProgressBar, inputCls } from "./ui";
+import { Alert, Avatar, Badge, Button, Card, Field, ProgressBar, inputCls, useArmed } from "./ui";
 import { api } from "@/lib/client";
 import { TASK_STATUS_LABELS, type Task, type TaskStatus } from "@/lib/types";
 import { cn, formatDate, todayISO } from "@/lib/utils";
@@ -52,10 +52,7 @@ function useTaskActions() {
     error,
     setStatus: (t: Task, status: TaskStatus) =>
       run(t.id, () => api(`/api/projects/${code}/tasks/${t.id}`, { method: "PATCH", session, body: { status } })),
-    remove: (t: Task) => {
-      if (!confirm(`Xoá nhiệm vụ “${t.title}”?`)) return Promise.resolve();
-      return run(t.id, () => api(`/api/projects/${code}/tasks/${t.id}`, { method: "DELETE", session }));
-    },
+    remove: (t: Task) => run(t.id, () => api(`/api/projects/${code}/tasks/${t.id}`, { method: "DELETE", session })),
   };
 }
 
@@ -239,6 +236,7 @@ function AssignForm({ onDone }: { onDone: () => void }) {
 export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; setFormOpen: (v: boolean) => void }) {
   const { data } = useProject();
   const { busyId, error, remove } = useTaskActions();
+  const { armed, arm } = useArmed();
 
   const total = data.tasks.length;
   const done = data.tasks.filter((t) => t.status === "done").length;
@@ -300,16 +298,27 @@ export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; se
                         <Badge tone={due.tone} className="shrink-0">
                           {due.label}
                         </Badge>
-                        {canDelete && (
-                          <button
-                            onClick={() => remove(t)}
-                            disabled={busyId === t.id}
-                            aria-label="Xoá nhiệm vụ"
-                            className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        {canDelete &&
+                          (armed === t.id ? (
+                            <button
+                              onClick={() => {
+                                arm(null);
+                                remove(t);
+                              }}
+                              className="shrink-0 rounded bg-rose-600 px-2 py-0.5 text-xs font-semibold text-white hover:bg-rose-700"
+                            >
+                              Xoá?
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => arm(t.id)}
+                              disabled={busyId === t.id}
+                              aria-label="Xoá nhiệm vụ"
+                              className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          ))}
                       </li>
                     );
                   })}

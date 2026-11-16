@@ -16,7 +16,6 @@ export default function LogPage() {
   const hours = mine.reduce((s, l) => s + l.hours, 0);
 
   async function remove(l: WorkLog) {
-    if (!confirm(`Xoá công việc “${l.task}”?`)) return;
     try {
       await api(`/api/projects/${code}/logs/${l.id}`, { method: "DELETE", session });
       await refresh();

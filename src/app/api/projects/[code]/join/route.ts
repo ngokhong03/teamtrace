@@ -11,8 +11,8 @@ const MAX_MEMBERS = 12;
  * - MSSV chưa có trong nhóm  -> tạo thành viên mới với PIN vừa đặt.
  * - MSSV đã có               -> phải nhập đúng PIN (sai 5 lần liên tiếp -> khoá 10 phút).
  */
-export const POST = route(async (req: Request, ctx: { params: { code: string } }) => {
-  const project = await getProjectOr404(ctx.params.code);
+export const POST = route(async (req: Request, p: { code: string }) => {
+  const project = await getProjectOr404(p.code);
   const body = await readJson(req);
   const name = str(body.name, "Họ tên", { min: 2, max: 60 });
   const studentId = str(body.studentId, "Mã sinh viên", { min: 3, max: 30 });

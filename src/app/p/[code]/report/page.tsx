@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useProject } from "@/components/ProjectProvider";
 import RadarChartCard from "@/components/RadarChartCard";
-import { Alert, Avatar, Badge, Button, Card, PageTitle, ProgressBar, Spinner, inputCls } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, Card, CopyFallback, PageTitle, ProgressBar, Spinner, copyText, inputCls } from "@/components/ui";
 import { api } from "@/lib/client";
 import { suggestGrade } from "@/lib/scoring";
 import type { MemberReport, ReportResponse } from "@/lib/types";
@@ -71,6 +71,7 @@ export default function ReportPage() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMsg, setAiMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fallback, setFallback] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>(data.me.id);
   const [grade, setGrade] = useState("");
 
@@ -111,12 +112,12 @@ export default function ReportPage() {
 
   async function copy() {
     if (!report) return;
-    try {
-      await navigator.clipboard.writeText(summaryText(report));
+    const text = summaryText(report);
+    if (await copyText(text)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    } catch {
-      prompt("Sao chép nội dung báo cáo:", summaryText(report));
+    } else {
+      setFallback(text);
     }
   }
 
@@ -159,6 +160,12 @@ export default function ReportPage() {
           }
         />
       </div>
+
+      {fallback && (
+        <div className="mb-4">
+          <CopyFallback text={fallback} onClose={() => setFallback(null)} />
+        </div>
+      )}
 
       {report.warnings.length > 0 && (
         <div className="mb-4 space-y-2">

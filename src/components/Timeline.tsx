@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock, ExternalLink, Trash2 } from "lucide-react";
-import { Avatar, Badge, ProgressBar } from "./ui";
+import { Avatar, Badge, ProgressBar, useArmed } from "./ui";
 import { dayLabel, domainOf, fmtNum, timeAgo } from "@/lib/utils";
 import type { WorkLog } from "@/lib/types";
 
@@ -18,6 +18,7 @@ export default function Timeline({
   onDelete?: (log: WorkLog) => void;
   emptyText?: string;
 }) {
+  const { armed, arm } = useArmed();
   if (!logs.length) {
     return <p className="rounded-xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">{emptyText}</p>;
   }
@@ -48,15 +49,26 @@ export default function Timeline({
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Badge tone="indigo">{l.category}</Badge>
-                        {onDelete && meId === l.memberId && (
-                          <button
-                            onClick={() => onDelete(l)}
-                            aria-label="Xoá công việc"
-                            className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        {onDelete && meId === l.memberId &&
+                          (armed === l.id ? (
+                            <button
+                              onClick={() => {
+                                arm(null);
+                                onDelete(l);
+                              }}
+                              className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white hover:bg-rose-700"
+                            >
+                              Bấm lần nữa để xoá
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => arm(l.id)}
+                              aria-label="Xoá công việc"
+                              className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          ))}
                       </div>
                     </div>
                     <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{l.description}</p>

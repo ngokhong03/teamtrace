@@ -22,6 +22,7 @@ export default function PeerReviewForm({ onDone }: { onDone: () => void }) {
     Object.fromEntries(targets.map((t) => [t.id, { responsibility: 0, quality: 0, collaboration: 0, comment: "" }]))
   );
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
 
   const complete = (d: Draft) => d.responsibility > 0 && d.quality > 0 && d.collaboration > 0;
@@ -32,7 +33,7 @@ export default function PeerReviewForm({ onDone }: { onDone: () => void }) {
 
   async function submit() {
     if (!allDone) return setError("Hãy chấm đủ 3 tiêu chí cho tất cả thành viên.");
-    if (!confirm("Sau khi nộp bạn không thể sửa hoặc nộp lại. Xác nhận gửi đánh giá ẩn danh?")) return;
+    setConfirming(false);
     setBusy(true);
     setError("");
     try {
@@ -101,10 +102,27 @@ export default function PeerReviewForm({ onDone }: { onDone: () => void }) {
         <p className="text-sm text-slate-600">
           Đã chấm <b>{doneCount}/{targets.length}</b> thành viên
         </p>
-        <Button onClick={submit} loading={busy} disabled={!allDone}>
-          <Send className="h-4 w-4" /> Gửi đánh giá
-        </Button>
+        {!confirming && (
+          <Button onClick={() => (allDone ? setConfirming(true) : setError("Hãy chấm đủ 3 tiêu chí cho tất cả thành viên."))} loading={busy} disabled={!allDone}>
+            <Send className="h-4 w-4" /> Gửi đánh giá
+          </Button>
+        )}
       </div>
+      {confirming && (
+        <div className="sticky bottom-20 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-lg sm:bottom-4">
+          <p className="text-sm font-medium text-amber-900">
+            Sau khi gửi, bạn <b>không thể sửa hoặc gửi lại</b>. Đánh giá được lưu ẩn danh. Xác nhận gửi?
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button onClick={submit} loading={busy}>
+              <Send className="h-4 w-4" /> Xác nhận gửi
+            </Button>
+            <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>
+              Xem lại
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

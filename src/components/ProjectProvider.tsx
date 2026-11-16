@@ -99,10 +99,10 @@ export default function ProjectProvider({ code, children }: { code: string; chil
     setSession(null);
     setData(null);
     setPhase("loading");
-    api<{ name: string; course: string }>(`/api/projects/${code}`).then((i) => {
-      setInfo(i);
-      setPhase("join");
-    });
+    api<{ name: string; course: string }>(`/api/projects/${code}`)
+      .then((i) => setInfo(i))
+      .catch(() => setInfo(null))
+      .finally(() => setPhase("join"));
   }, [code]);
 
   if (phase === "loading") return <Spinner />;

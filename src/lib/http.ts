@@ -8,13 +8,17 @@ export class HttpError extends Error {
   }
 }
 
-type Ctx = { params: { code: string; id?: string } };
-
-/** Bọc route handler: bắt lỗi và trả JSON thống nhất. */
-export function route<T extends Ctx | undefined>(fn: (req: Request, ctx: T) => Promise<unknown>) {
-  return async (req: Request, ctx: T) => {
+/**
+ * Bọc route handler: chờ params (Next.js 15 truyền params dạng Promise), bắt lỗi và trả JSON thống nhất.
+ * Hàm bên trong nhận params đã giải sẵn, ví dụ route(async (req, p: { code: string }) => ...).
+ */
+export function route<P extends Record<string, string> = Record<string, never>>(
+  fn: (req: Request, params: P) => Promise<unknown>
+) {
+  return async (req: Request, ctx: { params: Promise<P> }) => {
     try {
-      const data = await fn(req, ctx);
+      const params = ((await ctx?.params) ?? {}) as P;
+      const data = await fn(req, params);
       return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
     } catch (e) {
       if (e instanceof HttpError) {

@@ -4,8 +4,8 @@ import { CATEGORIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const POST = route(async (req: Request, ctx: { params: { code: string } }) => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const POST = route(async (req: Request, p: { code: string }) => {
+  const { project, member } = await authenticate(req, p.code);
   const body = await readJson(req);
 
   const task = str(body.task, "Tên đầu việc", { min: 2, max: 150 });

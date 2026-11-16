@@ -5,8 +5,8 @@ import type { ReportResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const GET = route(async (req: Request, ctx: { params: { code: string } }): Promise<ReportResponse> => {
-  const { project, member } = await authenticate(req, ctx.params.code);
+export const GET = route(async (req: Request, p: { code: string }): Promise<ReportResponse> => {
+  const { project, member } = await authenticate(req, p.code);
   const data = await loadProjectData(getStore(), project);
   return buildReport(data, member.id, member.isLeader);
 });
