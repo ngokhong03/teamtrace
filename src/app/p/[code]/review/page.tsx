@@ -9,7 +9,7 @@ import { Alert, Card, PageTitle } from "@/components/ui";
 export default function ReviewPage() {
   const { code, data, refresh } = useProject();
   const others = data.members.filter((m) => m.id !== data.me.id);
-  const submittedCount = data.members.filter((m) => m.submitted).length;
+  const submittedCount = data.submittedCount;
 
   return (
     <>

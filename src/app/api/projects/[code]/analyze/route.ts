@@ -21,6 +21,7 @@ export const POST = route(async (req: Request, p: { code: string }) => {
   const store = getStore();
   const data = await loadProjectData(store, project);
   const { metrics, comments, heurAi } = baseline(data);
+  const evidence = Object.fromEntries((await store.listEvidenceTexts(project.id)).map((e) => [e.logId, e.text]));
 
   let result;
   try {
@@ -32,6 +33,7 @@ export const POST = route(async (req: Request, p: { code: string }) => {
         metrics: metrics.find((x) => x.memberId === m.id)!,
         logs: data.logs.filter((l) => l.memberId === m.id),
         comments: comments[m.id] ?? [],
+        evidence,
         baseline: heurAi[m.id],
       })),
     });

@@ -1,6 +1,7 @@
 import { getStore } from "@/lib/store";
 import { HttpError, authenticate, isoDate, readJson, route, str, text } from "@/lib/http";
-import { TASK_STATUSES, type TaskPatch, type TaskStatus } from "@/lib/types";
+import { TASK_STATUSES, TASK_STATUS_LABELS, type TaskPatch, type TaskStatus } from "@/lib/types";
+import { record } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,17 @@ export const PATCH = route(async (req: Request, p: Ctx) => {
 
   if (Object.keys(patch).length === 0) throw new HttpError(400, "Không có gì để cập nhật");
   const updated = await store.updateTask(project.id, task.id, patch);
+  if (patch.status && patch.status !== task.status) {
+    await record(store, {
+      projectId: project.id,
+      actorId: member.id,
+      type: "task_status",
+      taskId: task.id,
+      logId: null,
+      summary: `chuyển “${task.title}” sang ${TASK_STATUS_LABELS[patch.status]}`,
+      detail: { title: task.title, from: task.status, to: patch.status },
+    });
+  }
   return { task: updated };
 });
 
@@ -63,5 +75,14 @@ export const DELETE = route(async (req: Request, p: Ctx) => {
     throw new HttpError(403, "Chỉ trưởng nhóm hoặc người tạo việc mới được xoá nhiệm vụ");
   }
   await store.deleteTask(project.id, task.id);
+  await record(store, {
+    projectId: project.id,
+    actorId: member.id,
+    type: "task_deleted",
+    taskId: task.id,
+    logId: null,
+    summary: `xoá nhiệm vụ “${task.title}”`,
+    detail: { title: task.title, assigneeId: task.assigneeId },
+  });
   return { ok: true };
 });

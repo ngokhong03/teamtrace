@@ -105,7 +105,7 @@ export default function OverviewPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat icon={Users} label="Thành viên" value={String(data.members.length)} sub={`${data.members.filter((m) => m.submitted).length} đã nộp đánh giá`} />
+        <Stat icon={Users} label="Thành viên" value={String(data.members.length)} sub={`${data.submittedCount}/${data.members.length} đã nộp đánh giá`} />
         <Stat icon={ClipboardList} label="Việc đã ghi nhận" value={String(data.logs.length)} sub={`${data.tasks.filter((t) => t.status === "done").length}/${data.tasks.length} nhiệm vụ xong`} />
         <Stat icon={Clock} label="Tổng giờ làm" value={fmtNum(Math.round(totalHours * 10) / 10)} />
         <Stat icon={Target} label="Hoàn thành TB" value={`${avgPct}%`} />
@@ -138,7 +138,6 @@ export default function OverviewPage() {
                   <p className="text-xs text-slate-500">{data.logs.filter((l) => l.memberId === m.id).length} đầu việc</p>
                 </div>
                 {m.isLeader && <Badge tone="indigo">Trưởng nhóm</Badge>}
-                {m.submitted ? <Badge tone="emerald">Đã đánh giá</Badge> : <Badge tone="amber">Chưa đánh giá</Badge>}
               </li>
             ))}
           </ul>
@@ -156,7 +155,7 @@ export default function OverviewPage() {
             + Ghi nhận việc
           </Link>
         </div>
-        <Timeline logs={data.logs} nameOf={nameOf} emptyText="Chưa có hoạt động nào. Hãy là người đầu tiên ghi nhận công việc!" />
+        <Timeline logs={data.logs} events={data.activities} nameOf={nameOf} emptyText="Chưa có hoạt động nào. Hãy là người đầu tiên ghi nhận công việc!" />
       </div>
     </>
   );

@@ -94,18 +94,21 @@ assert(an.status === 403, "member thường không chạy được AI -> 403");
 const an2 = await j(`/api/projects/${code}/analyze`, { method: "POST", body: {}, s: A });
 assert(an2.status === 400, "leader chạy AI khi chưa có key -> 400 thông báo rõ: " + an2.data.error);
 
-// ---- Giao việc ----
+// ---- Giao việc (chỉ trưởng nhóm) + ghi chú ----
 const tk = (path = "", o = {}) => j(`/api/projects/${code}/tasks${path}`, o);
 r = await tk("", { body: { title: "Khảo sát sinh viên", description: "50 bạn", assigneeId: Bm.memberId, dueDate: dl }, s: A });
 assert(r.status === 200 && r.data.task.status === "todo" && r.data.task.assigneeId === Bm.memberId, "trưởng nhóm giao việc cho B");
 const tid = r.data.task.id;
 r = await tk("", { body: { title: "Giao bậy", assigneeId: A.memberId }, s: Bm });
-assert(r.status === 403, "thành viên thường giao việc cho người khác -> 403");
+assert(r.status === 403, "thành viên giao việc cho người khác -> 403");
 r = await tk("", { body: { title: "Tự nhận việc" }, s: Bm });
-assert(r.status === 200 && r.data.task.assigneeId === Bm.memberId, "thành viên tự nhận việc cho chính mình");
-const selfTid = r.data.task.id;
+assert(r.status === 403, "thành viên tự nhận việc -> 403 (chỉ trưởng nhóm giao)");
 r = await tk("", { body: { title: "Người lạ", assigneeId: "00000000-0000-0000-0000-000000000000" }, s: A });
 assert(r.status === 400, "giao cho người không thuộc nhóm -> 400");
+r = await tk("/" + tid + "/notes", { body: { content: "Đã làm xong form, đang thu phản hồi" }, s: Bm });
+assert(r.status === 200, "người được giao ghi chú vào nhiệm vụ");
+r = await tk("/" + tid + "/notes", { body: { content: "chen ngang" }, s: C });
+assert(r.status === 403, "người không được giao ghi chú -> 403");
 r = await tk("/" + tid, { method: "PATCH", body: { status: "doing" }, s: C });
 assert(r.status === 403, "người không được giao đổi trạng thái -> 403");
 r = await tk("/" + tid, { method: "PATCH", body: { status: "bay" }, s: Bm });
@@ -115,17 +118,44 @@ assert(r.status === 200 && r.data.task.status === "doing", "người được gi
 r = await tk("/" + tid, { method: "PATCH", body: { status: "done" }, s: Bm });
 assert(r.status === 200 && r.data.task.status === "done" && r.data.task.doneAt, "người được giao hoàn thành (có doneAt)");
 r = await tk("/" + tid, { method: "PATCH", body: { title: "Sửa lén" }, s: Bm });
-assert(r.status === 403, "người được giao không sửa được tên việc do trưởng nhóm tạo -> 403");
+assert(r.status === 403, "người được giao không sửa được tên việc -> 403");
 r = await tk("/" + tid, { method: "PATCH", body: { assigneeId: C.memberId }, s: Bm });
-assert(r.status === 403, "thành viên thường đổi người được giao -> 403");
+assert(r.status === 403, "thành viên đổi người được giao -> 403");
 r = await tk("/" + tid, { method: "PATCH", body: { assigneeId: C.memberId, title: "Khảo sát 50 sinh viên" }, s: A });
 assert(r.status === 200 && r.data.task.assigneeId === C.memberId, "trưởng nhóm đổi người được giao + sửa tên");
 r = await tk("/" + tid, { method: "DELETE", s: Bm });
-assert(r.status === 403, "không phải trưởng nhóm/người tạo xoá việc -> 403");
-r = await tk("/" + selfTid, { method: "DELETE", s: Bm });
-assert(r.status === 200, "người tạo xoá việc tự nhận của mình");
+assert(r.status === 403, "thành viên xoá việc của trưởng nhóm -> 403");
+
+// ---- Trạng thái: ẩn ai đã/chưa đánh giá, có ghi chú + lịch sử ----
 r = await j(`/api/projects/${code}/state`, { s: C });
-assert(r.data.tasks.length === 1 && r.data.tasks[0].assigneeId === C.memberId, "state trả đúng danh sách nhiệm vụ cho C: " + r.data.tasks.map((t) => t.title).join(","));
+assert(r.data.tasks.length === 1 && r.data.tasks[0].assigneeId === C.memberId, "state trả đúng nhiệm vụ cho C");
+assert(r.data.members.every((m) => !("submitted" in m)), "không lộ trạng thái đánh giá của từng người");
+assert(r.data.submittedCount === 3, "chỉ có số tổng đã nộp đánh giá: " + r.data.submittedCount);
+assert(r.data.notes.length === 1 && r.data.notes[0].content.includes("form"), "state có ghi chú nhiệm vụ");
+const types = new Set(r.data.activities.map((a) => a.type));
+assert(["member_joined", "task_assigned", "task_status", "task_note", "log_added"].every((t) => types.has(t)), "lịch sử có đủ loại sự kiện: " + [...types].join(","));
+assert(!types.has("log_deleted"), "thành viên thường không thấy sự kiện xoá công việc");
+r = await j(`/api/projects/${code}/state`, { s: A });
+const delAct = r.data.activities.find((a) => a.type === "log_deleted");
+assert(delAct && delAct.detail.task === "Xoá thử", "trưởng nhóm thấy công việc đã xoá kèm nội dung cũ");
+
+// ---- Đọc link minh chứng ----
+r = await log(A, { task: "Trang tham khảo", description: "Đọc tài liệu tham khảo về định dạng tên miền", link: "https://example.com", hours: 1, percent: 100 });
+assert(r.status === 200 && ["ok", "limited"].includes(r.data.log.evidenceStatus), "đọc được link công khai: " + r.data.log.evidenceStatus);
+const evId = r.data.log.id;
+r = await j(`/api/projects/${code}/logs/${evId}`, { s: A });
+assert(r.status === 200 && /Example Domain/i.test(r.data.log.evidenceTitle + r.data.log.evidenceText), "người ghi xem được nội dung AI đọc");
+r = await j(`/api/projects/${code}/logs/${evId}`, { s: C });
+assert(r.status === 403, "thành viên khác không xem được nội dung minh chứng -> 403");
+r = await log(A, { task: "Link nội bộ", description: "thử link trỏ vào máy chủ nội bộ", link: "http://127.0.0.1/admin", hours: 1, percent: 10 });
+assert(r.status === 200 && r.data.log.evidenceStatus === "error", "chặn link nội bộ (chống SSRF): " + r.data.log.evidenceStatus);
+r = await log(A, { task: "Link metadata", description: "thử link metadata của máy chủ đám mây", link: "http://169.254.169.254/latest/meta-data", hours: 1, percent: 10 });
+assert(r.status === 200 && r.data.log.evidenceStatus === "error", "chặn địa chỉ metadata đám mây");
+r = await j(`/api/projects/${code}/logs/${evId}`, { method: "PATCH", body: { recheck: true }, s: C });
+assert(r.status === 403, "thành viên khác không đọc lại được link của người khác -> 403");
+r = await j(`/api/projects/${code}/logs/${evId}`, { method: "PATCH", body: { recheck: true }, s: A });
+assert(r.status === 200, "người ghi đọc lại link");
+
 // ---- Khoá sau 5 lần sai (dùng riêng tài khoản D, đặt cuối) ----
 let last;
 for (let i = 0; i < 5; i++) last = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "0000" } });

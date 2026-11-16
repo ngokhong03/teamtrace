@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, CheckCircle2, ClipboardList, Circle, PlayCircle, Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
+import { CalendarClock, CheckCircle2, ClipboardList, Circle, MessageSquare, PlayCircle, Plus, RotateCcw, Send, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useProject } from "./ProjectProvider";
 import { Alert, Avatar, Badge, Button, Card, Field, ProgressBar, inputCls, useArmed } from "./ui";
@@ -83,9 +83,11 @@ export function MyTasksCard({ onAdd }: { onAdd: () => void }) {
                 : `Còn ${open.length} việc cần làm${overdue ? ` · ${overdue} việc quá hạn` : ""}`}
           </p>
         </div>
-        <Button size="sm" variant="secondary" onClick={onAdd}>
-          <UserPlus className="h-4 w-4" /> {data.me.isLeader ? "Giao việc" : "Tự nhận việc"}
-        </Button>
+        {data.me.isLeader && (
+          <Button size="sm" variant="secondary" onClick={onAdd}>
+            <UserPlus className="h-4 w-4" /> Giao việc
+          </Button>
+        )}
       </div>
 
       {error && <Alert tone="error">{error}</Alert>}
@@ -94,7 +96,7 @@ export function MyTasksCard({ onAdd }: { onAdd: () => void }) {
         <p className="rounded-xl border border-dashed border-slate-300 bg-white/60 py-6 text-center text-sm text-slate-500">
           {data.me.isLeader
             ? "Hãy giao việc cho các thành viên (kể cả bản thân) để mọi người biết mình cần làm gì."
-            : "Trưởng nhóm sẽ giao việc cho bạn ở đây. Bạn cũng có thể bấm “Tự nhận việc”."}
+            : "Trưởng nhóm sẽ giao việc cho bạn ở đây. Khi có nhiệm vụ, bạn có thể ghi chú tiến độ hoặc vướng mắc vào từng việc."}
         </p>
       ) : (
         <ul className="space-y-2.5">
@@ -143,12 +145,76 @@ export function MyTasksCard({ onAdd }: { onAdd: () => void }) {
                     </Link>
                   )}
                 </div>
+                <TaskNotes task={t} />
               </li>
             );
           })}
         </ul>
       )}
     </Card>
+  );
+}
+
+/* ---------- Ghi chú vào nhiệm vụ ---------- */
+
+function TaskNotes({ task }: { task: Task }) {
+  const { code, session, data, refresh } = useProject();
+  const notes = data.notes.filter((n) => n.taskId === task.id);
+  const canWrite = task.assigneeId === data.me.id || data.me.isLeader;
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const nameOf = (id: string) => data.members.find((m) => m.id === id)?.name ?? "Thành viên";
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/projects/${code}/tasks/${task.id}/notes`, { session, body: { content: text } });
+      setText("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không gửi được ghi chú");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!notes.length && !canWrite) return null;
+  return (
+    <div className="mt-3 border-t border-slate-100 pl-8 pt-2">
+      <button onClick={() => setOpen(!open)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-600">
+        <MessageSquare className="h-3.5 w-3.5" /> {notes.length ? `${notes.length} ghi chú` : "Thêm ghi chú"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {notes.map((n) => (
+            <p key={n.id} className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
+              <b className="text-slate-900">{nameOf(n.memberId)}:</b> <span className="whitespace-pre-line">{n.content}</span>
+            </p>
+          ))}
+          {canWrite && (
+            <form onSubmit={send} className="flex gap-2">
+              <input
+                className={inputCls + " !py-1.5"}
+                name="note"
+                value={text}
+                maxLength={500}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Ghi chú tiến độ, vướng mắc, link tham khảo…"
+              />
+              <Button type="submit" size="sm" loading={busy} aria-label="Gửi ghi chú">
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          )}
+          {error && <Alert tone="error">{error}</Alert>}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -250,15 +316,15 @@ export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; se
             {total ? `${done}/${total} nhiệm vụ đã hoàn thành` : "Chưa có nhiệm vụ nào"}
           </p>
         </div>
-        {!formOpen && (
+        {!formOpen && data.me.isLeader && (
           <Button size="sm" variant="secondary" onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4" /> {data.me.isLeader ? "Giao việc" : "Tự nhận việc"}
+            <Plus className="h-4 w-4" /> Giao việc
           </Button>
         )}
       </div>
       {total > 0 && <ProgressBar value={(done / total) * 100} color="bg-emerald-500" className="mb-4" />}
 
-      {formOpen && <AssignForm onDone={() => setFormOpen(false)} />}
+      {formOpen && data.me.isLeader && <AssignForm onDone={() => setFormOpen(false)} />}
       {error && (
         <div className="mb-3">
           <Alert tone="error">{error}</Alert>

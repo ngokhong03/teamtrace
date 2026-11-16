@@ -12,6 +12,27 @@ import type { WorkLog } from "@/lib/types";
 export default function LogPage() {
   const { code, session, data, refresh } = useProject();
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [rechecking, setRechecking] = useState<string | null>(null);
+
+  async function recheck(l: WorkLog) {
+    setRechecking(l.id);
+    setError("");
+    setInfo("");
+    try {
+      const r = await api<{ evidenceStatus: string }>(`/api/projects/${code}/logs/${l.id}`, {
+        method: "PATCH",
+        session,
+        body: { recheck: true },
+      });
+      setInfo(r.evidenceStatus === "ok" ? "Đã đọc được nội dung link." : "Vẫn chưa đọc được link – hãy kiểm tra quyền chia sẻ.");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không đọc lại được link");
+    } finally {
+      setRechecking(null);
+    }
+  }
   const mine = data.logs.filter((l) => l.memberId === data.me.id);
   const hours = mine.reduce((s, l) => s + l.hours, 0);
 
@@ -44,11 +65,18 @@ export default function LogPage() {
               <Alert tone="error">{error}</Alert>
             </div>
           )}
+          {info && (
+            <div className="mb-3">
+              <Alert tone="info">{info}</Alert>
+            </div>
+          )}
           <Timeline
             logs={mine}
             nameOf={() => data.me.name}
             meId={data.me.id}
             onDelete={remove}
+            onRecheck={recheck}
+            recheckingId={rechecking}
             emptyText="Bạn chưa ghi nhận công việc nào. Hãy điền form bên cạnh."
           />
           <div className="mt-6">

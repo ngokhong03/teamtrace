@@ -1,7 +1,20 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import type { AiAnalysis, Member, Project, Review, Store, Task, WorkLog } from "@/lib/types";
+import type { Activity, AiAnalysis, Member, Project, Review, Store, Task, TaskNote, WorkLog } from "@/lib/types";
+
+type StoredLog = WorkLog & { evidenceText?: string };
+const excerpt = (t: string) => t.slice(0, 300);
+/** Bỏ toàn văn khi trả danh sách (nhẹ hơn) và điền giá trị mặc định cho dữ liệu cũ. */
+const lite = (l: StoredLog): WorkLog => {
+  const { evidenceText: _t, ...rest } = l;
+  return {
+    ...rest,
+    evidenceStatus: rest.evidenceStatus ?? (l.link ? "error" : "none"),
+    evidenceTitle: rest.evidenceTitle ?? "",
+    evidenceExcerpt: rest.evidenceExcerpt ?? "",
+  };
+};
 
 /**
  * Store lưu vào file JSON (.data/db.json) – dùng khi chạy local, không cần cài gì.
@@ -11,14 +24,16 @@ import type { AiAnalysis, Member, Project, Review, Store, Task, WorkLog } from "
 interface DB {
   projects: Project[];
   members: Member[];
-  logs: WorkLog[];
+  logs: StoredLog[];
   tasks: Task[];
+  notes: TaskNote[];
+  activities: Activity[];
   reviews: Review[];
   submissions: { projectId: string; reviewerId: string }[];
 }
 
 const FILE = path.join(process.cwd(), ".data", "db.json");
-const empty = (): DB => ({ projects: [], members: [], logs: [], tasks: [], reviews: [], submissions: [] });
+const empty = (): DB => ({ projects: [], members: [], logs: [], tasks: [], notes: [], activities: [], reviews: [], submissions: [] });
 
 let queue: Promise<unknown> = Promise.resolve();
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -118,12 +133,59 @@ export function createFileStore(): Store {
           .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
       ),
 
-    addLog: (input) =>
+    addLog: (input, evidenceText) =>
       mutate((db) => {
-        const log: WorkLog = { id: randomUUID(), ...input, createdAt: new Date().toISOString() };
+        const log: StoredLog = {
+          id: randomUUID(),
+          ...input,
+          evidenceExcerpt: excerpt(evidenceText),
+          evidenceText,
+          createdAt: new Date().toISOString(),
+        };
         db.logs.push(log);
-        return log;
+        return lite(log);
       }),
+
+    getLog: (projectId, logId) =>
+      read((db) => {
+        const l = db.logs.find((x) => x.projectId === projectId && x.id === logId);
+        return l ? { ...lite(l), evidenceText: l.evidenceText ?? "" } : null;
+      }),
+
+    updateLogEvidence: (projectId, logId, ev) =>
+      mutate((db) => {
+        const l = db.logs.find((x) => x.projectId === projectId && x.id === logId);
+        if (l) Object.assign(l, { evidenceStatus: ev.status, evidenceTitle: ev.title, evidenceText: ev.text, evidenceExcerpt: excerpt(ev.text) });
+      }),
+
+    listEvidenceTexts: (projectId) =>
+      read((db) =>
+        db.logs
+          .filter((l) => l.projectId === projectId && l.evidenceText)
+          .map((l) => ({ logId: l.id, text: l.evidenceText as string }))
+      ),
+
+    addNote: (projectId, input) =>
+      mutate((db) => {
+        const note: TaskNote = { id: randomUUID(), projectId, ...input, createdAt: new Date().toISOString() };
+        db.notes.push(note);
+        return note;
+      }),
+
+    listNotes: (projectId) => read((db) => db.notes.filter((n) => n.projectId === projectId)),
+
+    addActivity: (input) =>
+      mutate((db) => {
+        db.activities.push({ id: randomUUID(), ...input, createdAt: new Date().toISOString() });
+      }),
+
+    listActivities: (projectId, limit) =>
+      read((db) =>
+        db.activities
+          .filter((a) => a.projectId === projectId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+          .slice(0, limit)
+      ),
 
     deleteLog: (projectId, logId, memberId) =>
       mutate((db) => {
@@ -137,6 +199,7 @@ export function createFileStore(): Store {
         db.logs
           .filter((l) => l.projectId === projectId)
           .sort((a, b) => b.workDate.localeCompare(a.workDate) || b.createdAt.localeCompare(a.createdAt))
+          .map(lite)
       ),
 
     addTask: (projectId, input) =>

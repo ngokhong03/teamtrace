@@ -134,6 +134,9 @@ export function buildReport(
     const flags: string[] = [];
     if (m.logCount === 0) flags.push("Chưa ghi nhận công việc nào");
     else if (m.evidenceRate < 50) flags.push("Dưới 50% đầu việc có link minh chứng");
+    if (m.unreadableLinks > 0) {
+      flags.push(`${m.unreadableLinks} link minh chứng không đọc được (riêng tư hoặc lỗi)`);
+    }
     if (m.peerScore !== null && m.logCount > 0 && Math.abs(m.workScore - m.peerScore) > 25) {
       flags.push(
         `Chênh lệch lớn giữa WorkTrace (${Math.round(m.workScore)}) và đánh giá đồng đội (${Math.round(m.peerScore)})`
@@ -161,6 +164,7 @@ export function buildReport(
         effectiveHours: round1(m.effectiveHours),
         avgPercent: Math.round(m.avgPercent),
         evidenceRate: Math.round(m.evidenceRate),
+        readableRate: Math.round(m.readableRate),
         activeDays: m.activeDays,
         onTimeRate: Math.round(m.onTimeRate),
         reviewCount: m.peer?.count ?? 0,

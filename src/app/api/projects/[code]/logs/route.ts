@@ -1,6 +1,10 @@
 import { getStore } from "@/lib/store";
 import { HttpError, authenticate, readJson, route, str, text, isoDate } from "@/lib/http";
 import { CATEGORIES } from "@/lib/types";
+import { readEvidence } from "@/lib/evidence";
+import { record } from "@/lib/activity";
+
+export const maxDuration = 30; // có thể mất vài giây để đọc link minh chứng
 
 export const dynamic = "force-dynamic";
 
@@ -40,16 +44,33 @@ export const POST = route(async (req: Request, p: { code: string }) => {
   const diffDays = (Date.parse(workDate) - Date.now()) / 86_400_000;
   if (diffDays > 1 || diffDays < -60) throw new HttpError(400, "Ngày thực hiện không hợp lệ");
 
-  const log = await getStore().addLog({
+  // Đọc nội dung link để AI chấm điểm và để trưởng nhóm kiểm tra
+  const ev = await readEvidence(link);
+  const store = getStore();
+  const log = await store.addLog(
+    {
+      projectId: project.id,
+      memberId: member.id,
+      task,
+      description,
+      link,
+      category,
+      hours: Math.round(hours * 4) / 4,
+      percent: Math.round(percent),
+      workDate,
+      evidenceStatus: ev.status,
+      evidenceTitle: ev.title,
+    },
+    ev.text
+  );
+  await record(store, {
     projectId: project.id,
-    memberId: member.id,
-    task,
-    description,
-    link,
-    category,
-    hours: Math.round(hours * 4) / 4,
-    percent: Math.round(percent),
-    workDate,
+    actorId: member.id,
+    type: "log_added",
+    taskId: null,
+    logId: log.id,
+    summary: `ghi nhận: ${task}`,
+    detail: { task, link, hours: log.hours, percent: log.percent, evidenceStatus: ev.status },
   });
   return { log };
 });

@@ -1,6 +1,7 @@
 import { getStore } from "@/lib/store";
 import { HttpError, getProjectOr404, readJson, route, str } from "@/lib/http";
 import { LOCK_MINUTES, MAX_ATTEMPTS, hashPin, parsePin, verifyPin } from "@/lib/pin";
+import { record } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -61,5 +62,14 @@ export const POST = route(async (req: Request, p: { code: string }) => {
     throw new HttpError(400, `Nhóm đã đủ ${MAX_MEMBERS} thành viên`);
   }
   const m = await store.addMember(project.id, { name, studentId, isLeader: false, pinHash: hashPin(pin) });
+  await record(store, {
+    projectId: project.id,
+    actorId: m.id,
+    type: "member_joined",
+    taskId: null,
+    logId: null,
+    summary: "tham gia nhóm",
+    detail: {},
+  });
   return { memberId: m.id, token: m.token, name: m.name, rejoined: false };
 });

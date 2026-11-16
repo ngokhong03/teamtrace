@@ -56,7 +56,64 @@ export interface WorkLog {
   percent: number;
   workDate: string; // yyyy-mm-dd
   createdAt: string;
+  /** Kết quả đọc link minh chứng (xem lib/evidence.ts) */
+  evidenceStatus: EvidenceStatus;
+  evidenceTitle: string;
+  /** ~300 ký tự đầu nội dung đọc được (toàn văn chỉ lấy qua API chi tiết) */
+  evidenceExcerpt: string;
 }
+
+export const EVIDENCE_STATUSES = ["none", "ok", "limited", "private", "unsupported", "error"] as const;
+export type EvidenceStatus = (typeof EVIDENCE_STATUSES)[number];
+export const EVIDENCE_LABELS: Record<EvidenceStatus, string> = {
+  none: "Không có link",
+  ok: "AI đã đọc được nội dung",
+  limited: "Chỉ đọc được tiêu đề",
+  private: "Link đang để riêng tư",
+  unsupported: "Loại link chưa đọc được",
+  error: "Không mở được link",
+};
+export interface Evidence {
+  status: EvidenceStatus;
+  title: string;
+  text: string;
+}
+
+/** Ghi chú của thành viên vào một nhiệm vụ. */
+export interface TaskNote {
+  id: string;
+  projectId: string;
+  taskId: string;
+  memberId: string;
+  content: string;
+  createdAt: string;
+}
+
+export const ACTIVITY_TYPES = [
+  "member_joined",
+  "task_assigned",
+  "task_status",
+  "task_note",
+  "task_deleted",
+  "log_added",
+  "log_deleted",
+  "evidence_rechecked",
+] as const;
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
+/** Lịch sử hoạt động – chỉ thêm, không sửa/xoá (kể cả khi công việc bị xoá). */
+export interface Activity {
+  id: string;
+  projectId: string;
+  actorId: string | null;
+  type: ActivityType;
+  taskId: string | null;
+  logId: string | null;
+  summary: string;
+  detail: Record<string, unknown>;
+  createdAt: string;
+}
+export type NewActivity = Omit<Activity, "id" | "createdAt">;
 
 export const TASK_STATUSES = ["todo", "doing", "done"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
@@ -130,9 +187,19 @@ export interface Store {
   findMemberByStudentId(projectId: string, studentId: string): Promise<Member | null>;
   listMembers(projectId: string): Promise<Member[]>;
 
-  addLog(input: Omit<WorkLog, "id" | "createdAt">): Promise<WorkLog>;
+  addLog(input: Omit<WorkLog, "id" | "createdAt" | "evidenceExcerpt">, evidenceText: string): Promise<WorkLog>;
+  getLog(projectId: string, logId: string): Promise<(WorkLog & { evidenceText: string }) | null>;
+  updateLogEvidence(projectId: string, logId: string, ev: Evidence): Promise<void>;
   deleteLog(projectId: string, logId: string, memberId: string): Promise<boolean>;
   listLogs(projectId: string): Promise<WorkLog[]>;
+  /** Toàn văn nội dung minh chứng đọc được (cho AI) */
+  listEvidenceTexts(projectId: string): Promise<{ logId: string; text: string }[]>;
+
+  addNote(projectId: string, input: { taskId: string; memberId: string; content: string }): Promise<TaskNote>;
+  listNotes(projectId: string): Promise<TaskNote[]>;
+
+  addActivity(input: NewActivity): Promise<void>;
+  listActivities(projectId: string, limit: number): Promise<Activity[]>;
 
   addTask(projectId: string, input: NewTask): Promise<Task>;
   getTask(projectId: string, taskId: string): Promise<Task | null>;
@@ -153,15 +220,19 @@ export interface PublicMember {
   name: string;
   studentId: string;
   isLeader: boolean;
-  submitted: boolean;
 }
 
 export interface StateResponse {
   project: { code: string; name: string; course: string; deadline: string; createdAt: string };
   me: { id: string; name: string; studentId: string; isLeader: boolean; submitted: boolean };
   members: PublicMember[];
+  /** Chỉ con số tổng – không lộ ai đã/chưa nộp đánh giá */
+  submittedCount: number;
   logs: WorkLog[];
   tasks: Task[];
+  notes: TaskNote[];
+  /** Hoạt động gần đây (thành viên thường không thấy sự kiện xoá công việc) */
+  activities: Activity[];
 }
 
 export const RADAR_KEYS = ["initiative", "depth", "punctuality", "creativity", "support"] as const;
@@ -192,6 +263,7 @@ export interface MemberReport {
     effectiveHours: number;
     avgPercent: number;
     evidenceRate: number; // 0-100
+    readableRate: number; // 0-100: % đầu việc AI đọc được nội dung link
     activeDays: number;
     onTimeRate: number; // 0-100
     reviewCount: number;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardList, FileBarChart, LayoutDashboard, LogOut, Star } from "lucide-react";
+import { BarChart3, ClipboardList, FileBarChart, History, LayoutDashboard, LogOut, Star } from "lucide-react";
 import ProjectProvider, { useProject } from "./ProjectProvider";
 import { Avatar, Badge } from "./ui";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   const { code, data, logout } = useProject();
   const path = usePathname();
   const base = `/p/${code}`;
+  const tabs = data.me.isLeader ? [...TABS, { href: "/history", label: "Lịch sử", icon: History }] : TABS;
   const active = (h: string) => (h === "" ? path === base : path.startsWith(base + h));
 
   return (
@@ -52,7 +53,7 @@ function Frame({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <nav className="mx-auto hidden max-w-5xl gap-1 px-4 sm:flex">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <Link
               key={t.href}
               href={base + t.href}
@@ -69,8 +70,8 @@ function Frame({ children }: { children: React.ReactNode }) {
 
       <main className="mx-auto max-w-5xl px-4 py-5 sm:py-6">{children}</main>
 
-      <nav className="no-print fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden">
-        {TABS.map((t) => (
+      <nav style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} className="no-print fixed inset-x-0 bottom-0 z-20 grid border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden">
+        {tabs.map((t) => (
           <Link
             key={t.href}
             href={base + t.href}

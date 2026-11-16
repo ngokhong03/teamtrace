@@ -1,6 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
-import type { AiAnalysis, Member, Project, Review, Store, Task, WorkLog } from "@/lib/types";
+import type { Activity, AiAnalysis, EvidenceStatus, Member, Project, Review, Store, Task, TaskNote, WorkLog } from "@/lib/types";
+
+/** Các cột của work_logs trừ toàn văn minh chứng (để danh sách nhẹ) */
+const LOG_COLS =
+  "id,project_id,member_id,task,description,link,category,hours,percent,work_date,created_at,evidence_status,evidence_title,evidence_excerpt";
+const excerpt = (t: string) => t.slice(0, 300);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -43,6 +48,30 @@ const toLog = (r: any): WorkLog => ({
   hours: Number(r.hours),
   percent: Number(r.percent),
   workDate: r.work_date,
+  createdAt: r.created_at,
+  evidenceStatus: (r.evidence_status ?? (r.link ? "error" : "none")) as EvidenceStatus,
+  evidenceTitle: r.evidence_title ?? "",
+  evidenceExcerpt: r.evidence_excerpt ?? "",
+});
+
+const toNote = (r: any): TaskNote => ({
+  id: r.id,
+  projectId: r.project_id,
+  taskId: r.task_id,
+  memberId: r.member_id,
+  content: r.content,
+  createdAt: r.created_at,
+});
+
+const toActivity = (r: any): Activity => ({
+  id: r.id,
+  projectId: r.project_id,
+  actorId: r.actor_id ?? null,
+  type: r.type,
+  taskId: r.task_id ?? null,
+  logId: r.log_id ?? null,
+  summary: r.summary ?? "",
+  detail: r.detail ?? {},
   createdAt: r.created_at,
 });
 
@@ -147,7 +176,7 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
       return (check(res, "listMembers") as any[]).map(toMember);
     },
 
-    async addLog(input) {
+    async addLog(input, evidenceText) {
       const res = await db
         .from("work_logs")
         .insert({
@@ -160,10 +189,81 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
           hours: input.hours,
           percent: input.percent,
           work_date: input.workDate,
+          evidence_status: input.evidenceStatus,
+          evidence_title: input.evidenceTitle,
+          evidence_excerpt: excerpt(evidenceText),
+          evidence_text: evidenceText,
         })
-        .select()
+        .select(LOG_COLS)
         .single();
       return toLog(check(res, "addLog"));
+    },
+
+    async getLog(projectId, logId) {
+      if (!/^[0-9a-f-]{36}$/i.test(logId)) return null;
+      const res = await db.from("work_logs").select("*").eq("project_id", projectId).eq("id", logId).maybeSingle();
+      const row = check(res, "getLog") as any;
+      return row ? { ...toLog(row), evidenceText: row.evidence_text ?? "" } : null;
+    },
+
+    async updateLogEvidence(projectId, logId, ev) {
+      const res = await db
+        .from("work_logs")
+        .update({
+          evidence_status: ev.status,
+          evidence_title: ev.title,
+          evidence_excerpt: excerpt(ev.text),
+          evidence_text: ev.text,
+        })
+        .eq("project_id", projectId)
+        .eq("id", logId);
+      check({ data: true, error: res.error }, "updateLogEvidence");
+    },
+
+    async listEvidenceTexts(projectId) {
+      const res = await db
+        .from("work_logs")
+        .select("id,evidence_text")
+        .eq("project_id", projectId)
+        .neq("evidence_text", "");
+      return (check(res, "listEvidenceTexts") as any[]).map((r) => ({ logId: r.id, text: r.evidence_text as string }));
+    },
+
+    async addNote(projectId, input) {
+      const res = await db
+        .from("task_notes")
+        .insert({ project_id: projectId, task_id: input.taskId, member_id: input.memberId, content: input.content })
+        .select()
+        .single();
+      return toNote(check(res, "addNote"));
+    },
+
+    async listNotes(projectId) {
+      const res = await db.from("task_notes").select("*").eq("project_id", projectId).order("created_at");
+      return (check(res, "listNotes") as any[]).map(toNote);
+    },
+
+    async addActivity(input) {
+      const res = await db.from("activities").insert({
+        project_id: input.projectId,
+        actor_id: input.actorId,
+        type: input.type,
+        task_id: input.taskId,
+        log_id: input.logId,
+        summary: input.summary,
+        detail: input.detail,
+      });
+      check({ data: true, error: res.error }, "addActivity");
+    },
+
+    async listActivities(projectId, limit) {
+      const res = await db
+        .from("activities")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      return (check(res, "listActivities") as any[]).map(toActivity);
     },
 
     async deleteLog(projectId, logId, memberId) {
@@ -181,7 +281,7 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
     async listLogs(projectId) {
       const res = await db
         .from("work_logs")
-        .select("*")
+        .select(LOG_COLS)
         .eq("project_id", projectId)
         .order("work_date", { ascending: false })
         .order("created_at", { ascending: false });

@@ -348,6 +348,7 @@ export default function ReportPage() {
               ["Đầu việc", String(current.stats.logCount)],
               ["Hoàn thành TB", `${current.stats.avgPercent}%`],
               ["Có minh chứng", `${current.stats.evidenceRate}%`],
+              ["AI đọc được link", `${current.stats.readableRate}%`],
               ["Ngày hoạt động", String(current.stats.activeDays)],
               ["Lượt được đánh giá", String(current.stats.reviewCount)],
             ].map(([k, v]) => (

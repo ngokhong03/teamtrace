@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { Alert, Button, Field, inputCls } from "./ui";
 import { api } from "@/lib/client";
 import { useProject } from "./ProjectProvider";
-import { CATEGORIES } from "@/lib/types";
+import { CATEGORIES, EVIDENCE_LABELS, type WorkLog } from "@/lib/types";
 import { todayISO } from "@/lib/utils";
 
 const initial = () => ({
@@ -23,13 +23,25 @@ export default function TaskForm({ onSaved }: { onSaved: () => void }) {
   const [f, setF] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState<{ tone: "success" | "warn"; text: string } | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
+    setNotice(null);
     try {
-      await api(`/api/projects/${code}/logs`, { session, body: { ...f, hours: Number(f.hours) } });
+      const r = await api<{ log: WorkLog }>(`/api/projects/${code}/logs`, { session, body: { ...f, hours: Number(f.hours) } });
+      const st = r.log.evidenceStatus;
+      setNotice(
+        st === "ok"
+          ? { tone: "success", text: "Đã ghi nhận. AI đã đọc được nội dung link minh chứng." }
+          : st === "none"
+            ? { tone: "warn", text: "Đã ghi nhận. Nên thêm link minh chứng để được đánh giá đầy đủ." }
+            : st === "private"
+              ? { tone: "warn", text: "Đã ghi nhận, nhưng link đang để riêng tư nên AI không đọc được. Hãy bật chia sẻ “Bất kỳ ai có đường liên kết” rồi bấm “Đọc lại link” ở nhật ký." }
+              : { tone: "warn", text: `Đã ghi nhận. ${EVIDENCE_LABELS[st]} – AI chỉ chấm được phần mô tả.` }
+      );
       setF(initial());
       onSaved();
     } catch (err) {
@@ -61,7 +73,7 @@ export default function TaskForm({ onSaved }: { onSaved: () => void }) {
           required
         />
       </Field>
-      <Field label="Link minh chứng" hint="Google Docs, Canva, Slides, GitHub, Figma… Việc có link được tính điểm cao hơn.">
+      <Field label="Link minh chứng" hint="AI đọc được nội dung Google Docs/Slides/Sheets (bật “Bất kỳ ai có đường liên kết”), GitHub và trang web. Canva/Figma chỉ đọc được tiêu đề.">
         <input
           className={inputCls}
           value={f.link}
@@ -106,6 +118,7 @@ export default function TaskForm({ onSaved }: { onSaved: () => void }) {
         />
       </Field>
       {error && <Alert tone="error">{error}</Alert>}
+      {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
       <Button type="submit" loading={busy} size="lg" className="w-full sm:w-auto">
         <Plus className="h-4 w-4" /> Ghi nhận công việc
       </Button>

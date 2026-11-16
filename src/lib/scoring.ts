@@ -60,6 +60,10 @@ export interface MemberMetrics {
   effectiveHours: number;
   avgPercent: number;
   evidenceRate: number; // 0-100
+  /** % đầu việc có link mà hệ thống đọc được nội dung (dùng cho phần điểm AI) */
+  readableRate: number; // 0-100
+  /** Số link có nhưng không đọc được (riêng tư / lỗi / chưa hỗ trợ) */
+  unreadableLinks: number;
   detailScore: number; // 0-100
   activeDays: number;
   onTimeRate: number; // 0-100
@@ -90,6 +94,8 @@ export function computeMetrics(
       effectiveHours,
       avgPercent: n ? mean(mine.map((l) => l.percent)) : 0,
       evidenceRate: n ? (mine.filter(hasLink).length / n) * 100 : 0,
+      readableRate: n ? (mine.filter((l) => l.evidenceStatus === "ok").length / n) * 100 : 0,
+      unreadableLinks: mine.filter((l) => hasLink(l) && l.evidenceStatus !== "ok" && l.evidenceStatus !== "limited").length,
       detailScore: n ? mean(mine.map((l) => Math.min(1, l.description.trim().length / 160))) * 100 : 0,
       activeDays: new Set(mine.map((l) => l.workDate)).size,
       onTimeRate: n
@@ -131,6 +137,8 @@ export function computeMetrics(
       effectiveHours: b.effectiveHours,
       avgPercent: b.avgPercent,
       evidenceRate: b.evidenceRate,
+      readableRate: b.readableRate,
+      unreadableLinks: b.unreadableLinks,
       detailScore: b.detailScore,
       activeDays: b.activeDays,
       onTimeRate: b.onTimeRate,
@@ -169,10 +177,12 @@ export function heuristicAiScore(m: MemberMetrics, maxDays: number, comments: st
   const quality = m.peer ? (m.peer.quality / 5) * 100 : m.evidenceRate;
   return clamp(
     blend([
-      [m.detailScore, 0.3],
-      [consistency, 0.25],
-      [quality, 0.3],
-      [sentimentScore(comments), 0.15],
+      [m.detailScore, 0.25],
+      [consistency, 0.2],
+      [quality, 0.25],
+      // Minh chứng mà hệ thống mở và đọc được nội dung thật
+      [m.readableRate, 0.2],
+      [sentimentScore(comments), 0.1],
     ])
   );
 }
