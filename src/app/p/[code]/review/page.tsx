@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckCircle2, Users } from "lucide-react";
 import { useProject } from "@/components/ProjectProvider";
 import PeerReviewForm from "@/components/PeerReviewForm";
+import LeaderAssessmentForm from "@/components/LeaderAssessmentForm";
 import { Alert, Card, PageTitle } from "@/components/ui";
 
 export default function ReviewPage() {
@@ -45,6 +46,7 @@ export default function ReviewPage() {
           <PeerReviewForm onDone={refresh} />
         </>
       )}
+      <LeaderAssessmentForm />
     </>
   );
 }

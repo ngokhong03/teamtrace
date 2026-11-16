@@ -9,7 +9,8 @@ import type {
   Store,
   WorkLog,
 } from "./types";
-import { RADAR_KEYS } from "./types";
+import { RADAR_KEYS, type LeaderAssessment } from "./types";
+import { rubricAverage } from "./rubric";
 import {
   WEIGHTS,
   clamp,
@@ -28,16 +29,18 @@ export interface ProjectData {
   logs: WorkLog[];
   reviews: Review[];
   submitted: string[];
+  assessments: LeaderAssessment[];
 }
 
 export async function loadProjectData(store: Store, project: Project): Promise<ProjectData> {
-  const [members, logs, reviews, submitted] = await Promise.all([
+  const [members, logs, reviews, submitted, assessments] = await Promise.all([
     store.listMembers(project.id),
     store.listLogs(project.id),
     store.listReviews(project.id),
     store.listSubmitted(project.id),
+    store.listAssessments(project.id),
   ]);
-  return { project, members, logs, reviews, submitted };
+  return { project, members, logs, reviews, submitted, assessments };
 }
 
 export function commentsByMember(reviews: Review[]): Record<string, string[]> {
@@ -181,6 +184,12 @@ export function buildReport(
       // Nhận xét ẩn danh: mọi thành viên đều đọc được, không ai biết người viết
       // (hệ thống không lưu người chấm; thứ tự đã được xáo trộn)
       comments: comments[mem.id] ?? [],
+      // Đánh giá của trưởng nhóm: chỉ trưởng nhóm và chính người được đánh giá thấy
+      leaderAssessment: (() => {
+        if (!viewerIsLeader && mem.id !== viewerId) return null;
+        const a = d.assessments.find((x) => x.memberId === mem.id);
+        return a ? { average: rubricAverage(a.scores), scores: a.scores, comment: a.comment } : null;
+      })(),
     };
   });
 

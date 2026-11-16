@@ -1,5 +1,5 @@
 import { getStore } from "@/lib/store";
-import { HttpError, authenticate, isoDate, readJson, route, str, text } from "@/lib/http";
+import { HttpError, authenticate, isoDate, optionalUrl, readJson, requirementList, route, str, text, timeOfDay } from "@/lib/http";
 import { TASK_STATUSES, TASK_STATUS_LABELS, type TaskPatch, type TaskStatus } from "@/lib/types";
 import { record } from "@/lib/activity";
 
@@ -30,9 +30,39 @@ export const PATCH = route(async (req: Request, p: Ctx) => {
       throw new HttpError(403, "Chỉ người được giao hoặc trưởng nhóm mới đổi được trạng thái");
     }
     patch.status = body.status as TaskStatus;
+    // Trạng thái thay đổi thì kết quả duyệt cũ không còn giá trị
+    if (patch.status !== task.status) patch.approval = "none";
   }
 
-  const editsContent = body.title !== undefined || body.description !== undefined || body.dueDate !== undefined;
+  // Link sản phẩm: người phụ trách hoặc trưởng nhóm
+  if (body.productLink !== undefined) {
+    if (task.assigneeId !== member.id && !member.isLeader) {
+      throw new HttpError(403, "Chỉ người phụ trách hoặc trưởng nhóm mới cập nhật link sản phẩm");
+    }
+    patch.productLink = optionalUrl(body.productLink, "Link sản phẩm");
+  }
+
+  // Duyệt (Completed & Approved) hoặc yêu cầu sửa: chỉ trưởng nhóm
+  if (body.approval !== undefined) {
+    if (!member.isLeader) throw new HttpError(403, "Chỉ trưởng nhóm mới duyệt nhiệm vụ");
+    if (body.approval === "approved") {
+      if ((patch.status ?? task.status) !== "done") throw new HttpError(400, "Chỉ duyệt được nhiệm vụ đã hoàn thành");
+      patch.approval = "approved";
+    } else if (body.approval === "revise") {
+      patch.approval = "revise";
+      patch.status = "doing";
+    } else {
+      throw new HttpError(400, "Kết quả duyệt không hợp lệ");
+    }
+  }
+
+  const editsContent =
+    body.title !== undefined ||
+    body.description !== undefined ||
+    body.dueDate !== undefined ||
+    body.dueTime !== undefined ||
+    body.requirements !== undefined ||
+    body.supporterIds !== undefined;
   if (editsContent) {
     if (!member.isLeader && task.createdBy !== member.id) {
       throw new HttpError(403, "Chỉ trưởng nhóm hoặc người tạo việc mới được sửa nhiệm vụ");
@@ -40,6 +70,14 @@ export const PATCH = route(async (req: Request, p: Ctx) => {
     if (body.title !== undefined) patch.title = str(body.title, "Tên nhiệm vụ", { min: 2, max: 150 });
     if (body.description !== undefined) patch.description = text(body.description, "Mô tả", { max: 600, optional: true });
     if (body.dueDate !== undefined) patch.dueDate = isoDate(body.dueDate, "Hạn nộp", true);
+    if (body.dueTime !== undefined) patch.dueTime = timeOfDay(body.dueTime);
+    if (body.requirements !== undefined) patch.requirements = requirementList(body.requirements);
+    if (body.supporterIds !== undefined) {
+      const members = await store.listMembers(project.id);
+      const ids = [...new Set((Array.isArray(body.supporterIds) ? body.supporterIds : []).map(String))];
+      if (ids.some((id) => !members.some((m) => m.id === id))) throw new HttpError(400, "Người hỗ trợ không thuộc nhóm này");
+      patch.supporterIds = ids.filter((id) => id !== (patch.assigneeId ?? task.assigneeId));
+    }
   }
 
   if (body.assigneeId !== undefined) {
@@ -51,7 +89,17 @@ export const PATCH = route(async (req: Request, p: Ctx) => {
 
   if (Object.keys(patch).length === 0) throw new HttpError(400, "Không có gì để cập nhật");
   const updated = await store.updateTask(project.id, task.id, patch);
-  if (patch.status && patch.status !== task.status) {
+  if (patch.approval === "approved" || (patch.approval === "revise" && body.approval === "revise")) {
+    await record(store, {
+      projectId: project.id,
+      actorId: member.id,
+      type: "task_review",
+      taskId: task.id,
+      logId: null,
+      summary: patch.approval === "approved" ? `duyệt “${task.title}” (Completed & Approved)` : `yêu cầu sửa lại “${task.title}”`,
+      detail: { title: task.title, approval: patch.approval },
+    });
+  } else if (patch.status && patch.status !== task.status) {
     await record(store, {
       projectId: project.id,
       actorId: member.id,

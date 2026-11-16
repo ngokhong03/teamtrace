@@ -96,3 +96,36 @@ export function isoDate(v: unknown, field: string, optional = false): string {
   }
   return s;
 }
+
+/** Danh sách yêu cầu: mảng chuỗi hoặc chuỗi nhiều dòng (mỗi dòng 1 yêu cầu). */
+export function requirementList(v: unknown): string[] {
+  const raw = Array.isArray(v) ? v : typeof v === "string" ? v.split(/\r?\n/) : [];
+  const list = raw
+    .map((x) => (typeof x === "string" ? x.trim().replace(/^\d+[.)]\s*/, "") : ""))
+    .filter(Boolean);
+  if (list.length > 15) throw new HttpError(400, "Tối đa 15 yêu cầu cho một nhiệm vụ");
+  if (list.some((x) => x.length > 300)) throw new HttpError(400, "Mỗi yêu cầu tối đa 300 ký tự");
+  return list;
+}
+
+/** Giờ "HH:MM" hoặc rỗng */
+export function timeOfDay(v: unknown): string {
+  const s = typeof v === "string" ? v.trim() : "";
+  if (!s) return "";
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s)) throw new HttpError(400, "Giờ hạn nộp không hợp lệ (HH:MM)");
+  return s;
+}
+
+/** Link http(s) hợp lệ hoặc rỗng */
+export function optionalUrl(v: unknown, field: string): string {
+  let s = typeof v === "string" ? v.trim() : "";
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = "https://" + s;
+  try {
+    new URL(s);
+  } catch {
+    throw new HttpError(400, `${field} không hợp lệ`);
+  }
+  if (s.length > 500) throw new HttpError(400, `${field} quá dài`);
+  return s;
+}

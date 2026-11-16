@@ -159,6 +159,52 @@ assert(r.status === 403, "thành viên khác không đọc lại được link c
 r = await j(`/api/projects/${code}/logs/${evId}`, { method: "PATCH", body: { recheck: true }, s: A });
 assert(r.status === 200, "người ghi đọc lại link");
 
+// ---- Mẫu Progress Tracker: yêu cầu, người hỗ trợ, giờ hạn, duyệt ----
+r = await tk("", { body: { title: "Làm video micro", requirements: "1. Đọc kỹ nội dung\n2) Bổ sung ví dụ\n\nNộp bản nháp", assigneeId: Bm.memberId, supporterIds: [C.memberId, Bm.memberId], dueDate: dl, dueTime: "23:00" }, s: A });
+assert(r.status === 200 && r.data.task.requirements.length === 3 && r.data.task.requirements[0] === "Đọc kỹ nội dung", "nhiệm vụ có danh sách yêu cầu (tự bỏ số thứ tự): " + JSON.stringify(r.data.task.requirements));
+assert(r.data.task.supporterIds.length === 1 && r.data.task.supporterIds[0] === C.memberId, "người hỗ trợ (bỏ trùng với người phụ trách)");
+assert(r.data.task.dueTime === "23:00" && r.data.task.approval === "none", "có giờ hạn nộp 23:00, chưa duyệt");
+const t2 = r.data.task.id;
+r = await tk("", { body: { title: "Sai giờ", dueDate: dl, dueTime: "25:99" }, s: A });
+assert(r.status === 400, "giờ hạn không hợp lệ -> 400");
+r = await tk("/" + t2 + "/notes", { body: { content: "Mình hỗ trợ phần dựng video" }, s: C });
+assert(r.status === 200, "người hỗ trợ ghi chú được vào nhiệm vụ");
+r = await tk("/" + t2, { method: "PATCH", body: { approval: "approved" }, s: A });
+assert(r.status === 400, "không duyệt được việc chưa hoàn thành -> 400");
+r = await tk("/" + t2, { method: "PATCH", body: { status: "done", productLink: "drive.google.com/x" }, s: Bm });
+assert(r.status === 200 && r.data.task.status === "done" && r.data.task.productLink === "https://drive.google.com/x", "người phụ trách nộp link sản phẩm + hoàn thành");
+r = await tk("/" + t2, { method: "PATCH", body: { approval: "approved" }, s: Bm });
+assert(r.status === 403, "thành viên tự duyệt -> 403");
+r = await tk("/" + t2, { method: "PATCH", body: { approval: "revise" }, s: A });
+assert(r.status === 200 && r.data.task.approval === "revise" && r.data.task.status === "doing", "trưởng nhóm yêu cầu sửa -> quay lại Đang làm");
+r = await tk("/" + t2, { method: "PATCH", body: { status: "done" }, s: Bm });
+assert(r.status === 200 && r.data.task.approval === "none", "nộp lại -> chờ duyệt lại");
+r = await tk("/" + t2, { method: "PATCH", body: { approval: "approved" }, s: A });
+assert(r.status === 200 && r.data.task.approval === "approved" && r.data.task.approvedAt, "trưởng nhóm duyệt: Completed & Approved");
+
+// ---- Mẫu Team leader's assessment: bảng tiêu chí 4 mức ----
+const sc = { contribution: 4, attitude: 3, collaboration: 3 };
+r = await j(`/api/projects/${code}/assessments`, { method: "PUT", body: { memberId: C.memberId, scores: sc }, s: Bm });
+assert(r.status === 403, "thành viên chấm theo bảng tiêu chí -> 403");
+r = await j(`/api/projects/${code}/assessments`, { method: "PUT", body: { memberId: A.memberId, scores: sc }, s: A });
+assert(r.status === 400, "trưởng nhóm tự chấm mình -> 400");
+r = await j(`/api/projects/${code}/assessments`, { method: "PUT", body: { memberId: Bm.memberId, scores: { contribution: 4 } }, s: A });
+assert(r.status === 400, "chấm thiếu tiêu chí -> 400");
+r = await j(`/api/projects/${code}/assessments`, { method: "PUT", body: { memberId: Bm.memberId, scores: { ...sc, attitude: 5 } }, s: A });
+assert(r.status === 400, "điểm ngoài 1–4 -> 400");
+r = await j(`/api/projects/${code}/assessments`, { method: "PUT", body: { memberId: Bm.memberId, scores: sc, comment: "Làm tốt phần nội dung" }, s: A });
+assert(r.status === 200, "trưởng nhóm chấm B theo bảng tiêu chí");
+r = await j(`/api/projects/${code}/assessments`, { method: "PUT", body: { memberId: C.memberId, scores: { contribution: 2, attitude: 2, collaboration: 3 } }, s: A });
+assert(r.status === 200, "trưởng nhóm chấm C");
+r = await j(`/api/projects/${code}/state`, { s: Bm });
+assert(r.data.assessments.length === 1 && r.data.assessments[0].memberId === Bm.memberId, "thành viên chỉ thấy đánh giá về chính mình");
+r = await j(`/api/projects/${code}/report`, { s: Bm });
+const bSelf = r.data.members.find((m) => m.id === Bm.memberId), cOther = r.data.members.find((m) => m.id === C.memberId);
+assert(bSelf.leaderAssessment && Math.abs(bSelf.leaderAssessment.average - 3.33) < 0.01, "báo cáo: B thấy điểm trưởng nhóm của mình (3.33/4)");
+assert(cOther.leaderAssessment === null, "báo cáo: B không thấy điểm trưởng nhóm của C");
+r = await j(`/api/projects/${code}/report`, { s: A });
+assert(r.data.members.filter((m) => m.leaderAssessment).length === 2, "báo cáo: trưởng nhóm thấy đánh giá của mọi người");
+
 // ---- Khoá sau 5 lần sai (dùng riêng tài khoản D, đặt cuối) ----
 let last;
 for (let i = 0; i < 5; i++) last = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "0000" } });

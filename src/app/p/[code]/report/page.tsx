@@ -20,6 +20,7 @@ import RadarChartCard from "@/components/RadarChartCard";
 import { Alert, Avatar, Badge, Button, Card, CopyFallback, PageTitle, ProgressBar, Spinner, copyText, inputCls } from "@/components/ui";
 import { api } from "@/lib/client";
 import { suggestGrade } from "@/lib/scoring";
+import { LEADER_RUBRIC, LEVEL_LABELS } from "@/lib/rubric";
 import type { MemberReport, ReportResponse } from "@/lib/types";
 import { cn, formatDate, fmtNum } from "@/lib/utils";
 
@@ -52,6 +53,14 @@ function summaryText(r: ReportResponse): string {
     m.insight.strengths.forEach((s) => lines.push(`   + ${s}`));
     m.insight.improvements.forEach((s) => lines.push(`   - Cần cải thiện: ${s}`));
     m.flags.forEach((s) => lines.push(`   ! ${s}`));
+    if (m.leaderAssessment) {
+      lines.push(
+        `   Trưởng nhóm đánh giá: ${m.leaderAssessment.average.toFixed(2)}/4 (` +
+          LEADER_RUBRIC.map((c) => `${c.label}: ${m.leaderAssessment!.scores[c.key] ?? "-"}`).join("; ") +
+          ")"
+      );
+      if (m.leaderAssessment.comment) lines.push(`   Nhận xét trưởng nhóm: ${m.leaderAssessment.comment}`);
+    }
   }
   if (r.warnings.length) {
     lines.push("");
@@ -358,6 +367,24 @@ export default function ReportPage() {
               </div>
             ))}
           </dl>
+          {current.leaderAssessment && (
+            <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
+              <p className="text-sm font-semibold text-slate-900">
+                Trưởng nhóm đánh giá: {current.leaderAssessment.average.toFixed(2)}/4
+              </p>
+              <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
+                {LEADER_RUBRIC.map((c) => {
+                  const v = current.leaderAssessment!.scores[c.key];
+                  return (
+                    <li key={c.key}>
+                      {c.label}: <b>{v ? `${LEVEL_LABELS[v]} (${v})` : "—"}</b>
+                    </li>
+                  );
+                })}
+              </ul>
+              {current.leaderAssessment.comment && <p className="mt-1.5 text-xs italic text-slate-600">“{current.leaderAssessment.comment}”</p>}
+            </div>
+          )}
           {current.stats.peerAvg && (
             <p className="mt-3 text-xs text-slate-500">
               Đồng đội chấm TB: trách nhiệm {current.stats.peerAvg.responsibility}/5 · chất lượng {current.stats.peerAvg.quality}/5 · phối hợp{" "}

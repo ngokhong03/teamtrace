@@ -1,5 +1,5 @@
 import { getStore } from "@/lib/store";
-import { HttpError, authenticate, isoDate, readJson, route, str, text } from "@/lib/http";
+import { HttpError, authenticate, isoDate, readJson, requirementList, route, str, text, timeOfDay } from "@/lib/http";
 import { record } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,8 @@ export const POST = route(async (req: Request, p: { code: string }) => {
   const title = str(body.title, "Tên nhiệm vụ", { min: 2, max: 150 });
   const description = text(body.description, "Mô tả", { max: 600, optional: true });
   const dueDate = isoDate(body.dueDate, "Hạn nộp", true);
+  const dueTime = timeOfDay(body.dueTime);
+  const requirements = requirementList(body.requirements);
 
   const assigneeId = typeof body.assigneeId === "string" && body.assigneeId ? body.assigneeId : member.id;
   const assignee = await store.getMember(project.id, assigneeId);
@@ -29,7 +31,23 @@ export const POST = route(async (req: Request, p: { code: string }) => {
     throw new HttpError(400, `Dự án đã có tối đa ${MAX_TASKS} nhiệm vụ`);
   }
 
-  const task = await store.addTask(project.id, { title, description, assigneeId, createdBy: member.id, dueDate });
+  const members = await store.listMembers(project.id);
+  const rawSupporters = Array.isArray(body.supporterIds) ? body.supporterIds.map(String) : [];
+  const supporterIds = [...new Set(rawSupporters)].filter((id) => id !== assigneeId);
+  if (supporterIds.some((id) => !members.some((m) => m.id === id))) {
+    throw new HttpError(400, "Người hỗ trợ không thuộc nhóm này");
+  }
+
+  const task = await store.addTask(project.id, {
+    title,
+    description,
+    assigneeId,
+    createdBy: member.id,
+    dueDate,
+    dueTime,
+    requirements,
+    supporterIds,
+  });
   await record(store, {
     projectId: project.id,
     actorId: member.id,

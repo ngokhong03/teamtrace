@@ -6,14 +6,15 @@ export const dynamic = "force-dynamic";
 
 const MAX_NOTES_PER_TASK = 50;
 
-/** Ghi chú vào nhiệm vụ: người được giao hoặc trưởng nhóm. */
+/** Ghi chú vào nhiệm vụ: người phụ trách, người hỗ trợ hoặc trưởng nhóm. */
 export const POST = route(async (req: Request, p: { code: string; id: string }) => {
   const { project, member } = await authenticate(req, p.code);
   const store = getStore();
   const task = await store.getTask(project.id, p.id);
   if (!task) throw new HttpError(404, "Không tìm thấy nhiệm vụ");
-  if (task.assigneeId !== member.id && !member.isLeader) {
-    throw new HttpError(403, "Bạn chỉ ghi chú được vào nhiệm vụ được giao cho mình");
+  const canWrite = task.assigneeId === member.id || task.supporterIds.includes(member.id) || member.isLeader;
+  if (!canWrite) {
+    throw new HttpError(403, "Bạn chỉ ghi chú được vào nhiệm vụ mình phụ trách hoặc hỗ trợ");
   }
   const body = await readJson(req);
   const content = text(body.content, "Ghi chú", { min: 1, max: 500 });

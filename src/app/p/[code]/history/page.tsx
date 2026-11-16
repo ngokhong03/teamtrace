@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   log_added: "Ghi nhận công việc",
   log_deleted: "Xoá công việc",
   evidence_rechecked: "Đọc lại minh chứng",
+  task_review: "Duyệt nhiệm vụ",
 };
 
 const TYPE_TONE: Partial<Record<ActivityType, "indigo" | "emerald" | "rose" | "amber" | "slate">> = {

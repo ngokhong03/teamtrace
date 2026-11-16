@@ -10,13 +10,14 @@ const LEADER_ONLY: ActivityType[] = ["log_deleted", "evidence_rechecked"];
 export const GET = route(async (req: Request, p: { code: string }): Promise<StateResponse> => {
   const { project, member } = await authenticate(req, p.code);
   const store = getStore();
-  const [members, logs, submitted, tasks, notes, activities] = await Promise.all([
+  const [members, logs, submitted, tasks, notes, activities, assessments] = await Promise.all([
     store.listMembers(project.id),
     store.listLogs(project.id),
     store.listSubmitted(project.id),
     store.listTasks(project.id),
     store.listNotes(project.id),
     store.listActivities(project.id, member.isLeader ? 300 : 150),
+    store.listAssessments(project.id),
   ]);
   return {
     project: {
@@ -40,5 +41,7 @@ export const GET = route(async (req: Request, p: { code: string }): Promise<Stat
     tasks,
     notes,
     activities: member.isLeader ? activities : activities.filter((a) => !LEADER_ONLY.includes(a.type)),
+    // Đánh giá của trưởng nhóm: trưởng nhóm thấy hết, thành viên chỉ thấy đánh giá về mình
+    assessments: member.isLeader ? assessments : assessments.filter((a) => a.memberId === member.id),
   };
 });

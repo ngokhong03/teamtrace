@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
-import type { Activity, AiAnalysis, EvidenceStatus, Member, Project, Review, Store, Task, TaskNote, WorkLog } from "@/lib/types";
+import type { Activity, AiAnalysis, EvidenceStatus, LeaderAssessment, Member, Project, Review, Store, Task, TaskNote, WorkLog } from "@/lib/types";
 
 /** Các cột của work_logs trừ toàn văn minh chứng (để danh sách nhẹ) */
 const LOG_COLS =
@@ -83,9 +83,23 @@ const toTask = (r: any): Task => ({
   assigneeId: r.assignee_id,
   createdBy: r.created_by ?? r.assignee_id,
   dueDate: r.due_date ?? "",
+  dueTime: r.due_time ?? "",
   status: r.status,
   createdAt: r.created_at,
   doneAt: r.done_at ?? null,
+  requirements: Array.isArray(r.requirements) ? r.requirements : [],
+  supporterIds: Array.isArray(r.supporter_ids) ? r.supporter_ids : [],
+  productLink: r.product_link ?? "",
+  approval: r.approval ?? "none",
+  approvedAt: r.approved_at ?? null,
+});
+
+const toAssessment = (r: any): LeaderAssessment => ({
+  projectId: r.project_id,
+  memberId: r.member_id,
+  scores: r.scores ?? {},
+  comment: r.comment ?? "",
+  updatedAt: r.updated_at,
 });
 
 const toReview = (r: any): Review => ({
@@ -298,6 +312,9 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
           assignee_id: input.assigneeId,
           created_by: input.createdBy,
           due_date: input.dueDate || null,
+          due_time: input.dueTime,
+          requirements: input.requirements,
+          supporter_ids: input.supporterIds,
         })
         .select()
         .single();
@@ -322,6 +339,14 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
         row.status = patch.status;
         row.done_at = patch.status === "done" ? new Date().toISOString() : null;
       }
+      if (patch.dueTime !== undefined) row.due_time = patch.dueTime;
+      if (patch.requirements !== undefined) row.requirements = patch.requirements;
+      if (patch.supporterIds !== undefined) row.supporter_ids = patch.supporterIds;
+      if (patch.productLink !== undefined) row.product_link = patch.productLink;
+      if (patch.approval !== undefined) {
+        row.approval = patch.approval;
+        row.approved_at = patch.approval === "approved" ? new Date().toISOString() : null;
+      }
       const res = await db
         .from("tasks")
         .update(row)
@@ -337,6 +362,23 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
       if (!/^[0-9a-f-]{36}$/i.test(taskId)) return false;
       const res = await db.from("tasks").delete().eq("project_id", projectId).eq("id", taskId).select("id");
       return (check(res, "deleteTask") as any[]).length > 0;
+    },
+
+    async upsertAssessment(a) {
+      const res = await db
+        .from("leader_assessments")
+        .upsert(
+          { project_id: a.projectId, member_id: a.memberId, scores: a.scores, comment: a.comment, updated_at: new Date().toISOString() },
+          { onConflict: "project_id,member_id" }
+        )
+        .select()
+        .single();
+      return toAssessment(check(res, "upsertAssessment"));
+    },
+
+    async listAssessments(projectId) {
+      const res = await db.from("leader_assessments").select("*").eq("project_id", projectId);
+      return (check(res, "listAssessments") as any[]).map(toAssessment);
     },
 
     async listTasks(projectId) {

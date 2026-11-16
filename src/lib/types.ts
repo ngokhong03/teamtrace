@@ -98,6 +98,7 @@ export const ACTIVITY_TYPES = [
   "log_added",
   "log_deleted",
   "evidence_rechecked",
+  "task_review",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
@@ -132,17 +133,47 @@ export interface Task {
   assigneeId: string;
   createdBy: string;
   dueDate: string; // yyyy-mm-dd hoặc ""
+  /** Giờ hạn nộp "HH:MM" (theo mẫu Progress Tracker, ví dụ 23:00) hoặc "" */
+  dueTime: string;
   status: TaskStatus;
   createdAt: string;
   doneAt: string | null;
+  /** Danh sách yêu cầu đánh số (cột Requirements) */
+  requirements: string[];
+  /** Người hỗ trợ (cột Supporter) */
+  supporterIds: string[];
+  /** Link sản phẩm người phụ trách nộp khi hoàn thành */
+  productLink: string;
+  /** Trưởng nhóm duyệt: none = chưa duyệt, approved = Completed & Approved, revise = yêu cầu sửa */
+  approval: TaskApproval;
+  approvedAt: string | null;
 }
-export type NewTask = Pick<Task, "title" | "description" | "assigneeId" | "createdBy" | "dueDate">;
+export type TaskApproval = "none" | "approved" | "revise";
+export type NewTask = Pick<
+  Task,
+  "title" | "description" | "assigneeId" | "createdBy" | "dueDate" | "dueTime" | "requirements" | "supporterIds"
+>;
 export interface TaskPatch {
   title?: string;
   description?: string;
   assigneeId?: string;
   dueDate?: string;
+  dueTime?: string;
   status?: TaskStatus;
+  requirements?: string[];
+  supporterIds?: string[];
+  productLink?: string;
+  approval?: TaskApproval;
+}
+
+/** Đánh giá của trưởng nhóm theo bảng tiêu chí 4 mức (mẫu "Team leader's assessment"). */
+export interface LeaderAssessment {
+  projectId: string;
+  memberId: string;
+  /** khoá tiêu chí -> điểm 1..4 */
+  scores: Record<string, number>;
+  comment: string;
+  updatedAt: string;
 }
 
 /** Đánh giá chéo – KHÔNG có trường người chấm (ẩn danh ở tầng dữ liệu). */
@@ -207,6 +238,9 @@ export interface Store {
   deleteTask(projectId: string, taskId: string): Promise<boolean>;
   listTasks(projectId: string): Promise<Task[]>;
 
+  upsertAssessment(a: Omit<LeaderAssessment, "updatedAt">): Promise<LeaderAssessment>;
+  listAssessments(projectId: string): Promise<LeaderAssessment[]>;
+
   /** false nếu người này đã nộp đánh giá trước đó */
   submitReviews(projectId: string, reviewerId: string, reviews: NewReview[]): Promise<boolean>;
   listSubmitted(projectId: string): Promise<string[]>;
@@ -233,6 +267,8 @@ export interface StateResponse {
   notes: TaskNote[];
   /** Hoạt động gần đây (thành viên thường không thấy sự kiện xoá công việc) */
   activities: Activity[];
+  /** Trưởng nhóm thấy tất cả; thành viên chỉ thấy đánh giá về chính mình */
+  assessments: LeaderAssessment[];
 }
 
 export const RADAR_KEYS = ["initiative", "depth", "punctuality", "creativity", "support"] as const;
@@ -273,6 +309,8 @@ export interface MemberReport {
   flags: string[];
   /** Nhận xét ẩn danh về người này – mọi thành viên đều xem được, không kèm người viết */
   comments: string[];
+  /** Đánh giá của trưởng nhóm (chỉ trả cho trưởng nhóm và chính người được đánh giá) */
+  leaderAssessment: { average: number; scores: Record<string, number>; comment: string } | null;
 }
 
 export interface ReportResponse {

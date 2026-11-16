@@ -1,7 +1,18 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import type { Activity, AiAnalysis, Member, Project, Review, Store, Task, TaskNote, WorkLog } from "@/lib/types";
+import type { Activity, AiAnalysis, LeaderAssessment, Member, Project, Review, Store, Task, TaskNote, WorkLog } from "@/lib/types";
+
+/** Điền giá trị mặc định cho nhiệm vụ tạo từ phiên bản cũ */
+const fullTask = (t: Task): Task => ({
+  ...t,
+  dueTime: t.dueTime ?? "",
+  requirements: t.requirements ?? [],
+  supporterIds: t.supporterIds ?? [],
+  productLink: t.productLink ?? "",
+  approval: t.approval ?? "none",
+  approvedAt: t.approvedAt ?? null,
+});
 
 type StoredLog = WorkLog & { evidenceText?: string };
 const excerpt = (t: string) => t.slice(0, 300);
@@ -27,13 +38,14 @@ interface DB {
   logs: StoredLog[];
   tasks: Task[];
   notes: TaskNote[];
+  assessments: LeaderAssessment[];
   activities: Activity[];
   reviews: Review[];
   submissions: { projectId: string; reviewerId: string }[];
 }
 
 const FILE = path.join(process.cwd(), ".data", "db.json");
-const empty = (): DB => ({ projects: [], members: [], logs: [], tasks: [], notes: [], activities: [], reviews: [], submissions: [] });
+const empty = (): DB => ({ projects: [], members: [], logs: [], tasks: [], notes: [], assessments: [], activities: [], reviews: [], submissions: [] });
 
 let queue: Promise<unknown> = Promise.resolve();
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -211,13 +223,19 @@ export function createFileStore(): Store {
           status: "todo",
           createdAt: new Date().toISOString(),
           doneAt: null,
+          productLink: "",
+          approval: "none",
+          approvedAt: null,
         };
         db.tasks.push(task);
         return task;
       }),
 
     getTask: (projectId, taskId) =>
-      read((db) => db.tasks.find((t) => t.projectId === projectId && t.id === taskId) ?? null),
+      read((db) => {
+        const t = db.tasks.find((x) => x.projectId === projectId && x.id === taskId);
+        return t ? fullTask(t) : null;
+      }),
 
     updateTask: (projectId, taskId, patch) =>
       mutate((db) => {
@@ -225,7 +243,8 @@ export function createFileStore(): Store {
         if (!t) return null;
         Object.assign(t, patch);
         if (patch.status) t.doneAt = patch.status === "done" ? new Date().toISOString() : null;
-        return { ...t };
+        if (patch.approval) t.approvedAt = patch.approval === "approved" ? new Date().toISOString() : null;
+        return fullTask({ ...t });
       }),
 
     deleteTask: (projectId, taskId) =>
@@ -236,7 +255,22 @@ export function createFileStore(): Store {
       }),
 
     listTasks: (projectId) =>
-      read((db) => db.tasks.filter((t) => t.projectId === projectId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+      read((db) =>
+        db.tasks
+          .filter((t) => t.projectId === projectId)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+          .map(fullTask)
+      ),
+
+    upsertAssessment: (a) =>
+      mutate((db) => {
+        db.assessments = db.assessments.filter((x) => !(x.projectId === a.projectId && x.memberId === a.memberId));
+        const row: LeaderAssessment = { ...a, updatedAt: new Date().toISOString() };
+        db.assessments.push(row);
+        return row;
+      }),
+
+    listAssessments: (projectId) => read((db) => db.assessments.filter((x) => x.projectId === projectId)),
 
     submitReviews: (projectId, reviewerId, reviews) =>
       mutate((db) => {
