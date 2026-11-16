@@ -72,7 +72,7 @@ export default function TaskForm({ onSaved }: { onSaved: () => void }) {
           required
         />
       </Field>
-      <Field label="Link minh chứng" hint="AI đọc được nội dung Google Docs/Slides/Sheets (bật “Bất kỳ ai có đường liên kết”), GitHub và trang web. Canva/Figma chỉ đọc được tiêu đề.">
+      <Field label="Link minh chứng" hint="AI đọc được nội dung Google Docs/Slides/Sheets, file PDF/Word/PowerPoint/Excel (kể cả trên Google Drive), GitHub và trang web — nhớ bật “Bất kỳ ai có đường liên kết”. YouTube/Canva/Figma chỉ đọc được tiêu đề; với Canva hãy xuất PDF rồi dán link Drive để AI đọc cả nội dung.">
         <input
           className={inputCls}
           value={f.link}
