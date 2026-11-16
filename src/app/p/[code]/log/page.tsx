@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProject } from "@/components/ProjectProvider";
 import TaskForm from "@/components/TaskForm";
+import AdSlot from "@/components/AdSlot";
 import Timeline from "@/components/Timeline";
 import { Alert, Card, PageTitle } from "@/components/ui";
 import { api } from "@/lib/client";
@@ -51,6 +52,9 @@ export default function LogPage() {
             onDelete={remove}
             emptyText="Bạn chưa ghi nhận công việc nào. Hãy điền form bên cạnh."
           />
+          <div className="mt-6">
+            <AdSlot />
+          </div>
         </div>
       </div>
     </>

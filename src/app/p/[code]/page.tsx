@@ -7,6 +7,7 @@ import { useProject } from "@/components/ProjectProvider";
 import Timeline from "@/components/Timeline";
 import HoursChart from "@/components/HoursChart";
 import { MyTasksCard, TeamTasksCard } from "@/components/Tasks";
+import AdSlot from "@/components/AdSlot";
 import { Alert, Avatar, Badge, Button, Card, PageTitle } from "@/components/ui";
 import { fmtNum, formatDate } from "@/lib/utils";
 
@@ -136,6 +137,10 @@ export default function OverviewPage() {
             ))}
           </ul>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <AdSlot />
       </div>
 
       <div className="mt-6">
