@@ -99,6 +99,18 @@ export const PATCH = route(async (req: Request, p: Ctx) => {
       summary: patch.approval === "approved" ? `duyệt “${task.title}” (Completed & Approved)` : `yêu cầu sửa lại “${task.title}”`,
       detail: { title: task.title, approval: patch.approval },
     });
+  } else if ((patch.dueDate !== undefined && patch.dueDate !== task.dueDate) || (patch.dueTime !== undefined && patch.dueTime !== task.dueTime)) {
+    const fmt = (d?: string | null, t?: string | null) => (d ? `${d}${t ? ` ${t}` : ""}` : "không có hạn");
+    const to = fmt(patch.dueDate ?? task.dueDate, patch.dueTime ?? task.dueTime);
+    await record(store, {
+      projectId: project.id,
+      actorId: member.id,
+      type: "task_status",
+      taskId: task.id,
+      logId: null,
+      summary: `đổi hạn “${task.title}” thành ${to}`,
+      detail: { title: task.title, from: fmt(task.dueDate, task.dueTime), to },
+    });
   } else if (patch.status && patch.status !== task.status) {
     await record(store, {
       projectId: project.id,

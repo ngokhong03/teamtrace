@@ -453,6 +453,52 @@ function AssignForm({ onDone }: { onDone: () => void }) {
 
 /* ---------- Bảng phân công cả nhóm (Work Distribution) ---------- */
 
+/** Trưởng nhóm đổi hạn nộp ngay trên danh sách. */
+function DueEditor({ t }: { t: Task }) {
+  const { code, session, refresh } = useProject();
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(t.dueDate ?? "");
+  const [time, setTime] = useState(t.dueTime || "23:00");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  async function save() {
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/projects/${code}/tasks/${t.id}`, {
+        method: "PATCH",
+        session,
+        body: { dueDate: date, dueTime: date ? time : "" },
+      });
+      await refresh();
+      setOpen(false);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Không lưu được");
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!open)
+    return (
+      <button onClick={() => setOpen(true)} className="font-semibold text-indigo-600 hover:underline">
+        · Đổi hạn
+      </button>
+    );
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <input type="date" className={`${inputCls} !w-auto !py-1 text-xs`} name={`due-${t.id}`} value={date} onChange={(e) => setDate(e.target.value)} />
+      <input type="time" className={`${inputCls} !w-auto !py-1 text-xs`} name={`time-${t.id}`} value={time} disabled={!date} onChange={(e) => setTime(e.target.value)} />
+      <Button size="sm" onClick={save} loading={busy}>
+        Lưu
+      </Button>
+      <button onClick={() => setOpen(false)} className="text-slate-500 hover:underline">
+        Huỷ
+      </button>
+      {err && <span className="text-rose-600">{err}</span>}
+    </span>
+  );
+}
+
 export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; setFormOpen: (v: boolean) => void }) {
   const { data } = useProject();
   const { busyId, error, remove, review } = useTaskActions();
@@ -546,6 +592,7 @@ export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; se
                         </div>
                         <div className="ml-7 mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           <span className={due.tone === "rose" ? "font-semibold text-rose-600" : ""}>{due.label}</span>
+                          {isLeader && <DueEditor t={t} />}
                           {t.requirements.length > 0 && <span>· {t.requirements.length} yêu cầu</span>}
                           {t.supporterIds.length > 0 && (
                             <span>
