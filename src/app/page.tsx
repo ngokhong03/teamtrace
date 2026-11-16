@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BarChart3, EyeOff, Sparkles, Users, X } from "lucide-react";
 import CreateProjectForm from "@/components/CreateProjectForm";
+import LandingSections from "@/components/Landing";
 import { Alert, Avatar, Button, Card, inputCls } from "@/components/ui";
 import { clearSession, listSessions, type SavedProject } from "@/lib/client";
 
@@ -32,6 +33,11 @@ export default function Home() {
           <BarChart3 className="h-5 w-5" />
         </span>
         <span className="text-xl font-extrabold tracking-tight text-slate-900">TeamTrace</span>
+        <nav className="ml-auto hidden gap-5 text-sm font-medium text-slate-600 sm:flex">
+          <a href="#danh-cho-ai" className="hover:text-indigo-600">Dành cho ai</a>
+          <a href="#cach-hoat-dong" className="hover:text-indigo-600">Cách hoạt động</a>
+          <a href="#cac-goi" className="hover:text-indigo-600">Các gói</a>
+        </nav>
       </header>
 
       <div className="grid items-start gap-8 lg:grid-cols-2 lg:gap-12">
@@ -45,8 +51,9 @@ export default function Home() {
             <span className="text-indigo-600">Đánh giá công bằng.</span>
           </h1>
           <p className="mt-4 max-w-lg text-slate-600">
-            Mỗi thành viên ghi lại công việc kèm minh chứng, đánh giá chéo ẩn danh, và nhận báo cáo đóng góp có dữ liệu để
-            nộp cho giảng viên – không còn cảnh người làm nhiều, người làm ít mà điểm như nhau.
+            Nền tảng ghi nhận và đánh giá đóng góp thực tế của từng người trong nhóm – cho nhóm sinh viên, đội dự án và
+            doanh nghiệp. Mỗi thành viên ghi lại công việc kèm minh chứng, đánh giá chéo ẩn danh và nhận báo cáo đóng góp có
+            dữ liệu – không còn cảnh người làm nhiều, người làm ít mà kết quả như nhau.
           </p>
           <ul className="mt-6 space-y-3">
             {[
@@ -157,6 +164,8 @@ export default function Home() {
         </Card>
         </div>
       </div>
+
+      <LandingSections />
     </main>
   );
 }
