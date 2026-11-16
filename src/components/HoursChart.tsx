@@ -17,10 +17,10 @@ export default function HoursChart({ data }: { data: HoursDatum[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid horizontal={false} stroke="#e2e8f0" />
-          <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} unit="h" allowDecimals={false} />
+          <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} allowDecimals={false} />
           <YAxis type="category" dataKey="name" width={96} tick={{ fontSize: 12, fill: "#334155" }} />
           <Tooltip
-            formatter={(v: number) => [`${v} giờ`, "Giờ quy đổi"]}
+            formatter={(v: number) => [`${v}`, "Khối lượng quy đổi"]}
             labelFormatter={(l) => String(l)}
             cursor={{ fill: "#f1f5f9" }}
           />

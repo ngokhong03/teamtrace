@@ -43,7 +43,7 @@ function summaryText(r: ReportResponse): string {
   for (const m of r.members) {
     lines.push(
       `${m.rank}. ${m.name} (${m.studentId}) – Điểm: ${m.total}/100 – Tỷ lệ đóng góp: ${m.share}% – ` +
-        `WorkTrace ${m.workScore}, Peer ${m.peerScore ?? "n/a"}, AI ${m.aiScore} – ${m.stats.hours} giờ, ${m.stats.logCount} đầu việc`
+        `WorkTrace ${m.workScore}, Peer ${m.peerScore ?? "n/a"}, AI ${m.aiScore} – ${m.stats.logCount} đầu việc`
     );
   }
   lines.push("");
@@ -218,7 +218,7 @@ export default function ReportPage() {
           {[
             ["Thành viên", String(report.team.memberCount)],
             ["Đầu việc", String(report.team.logCount)],
-            ["Tổng giờ", fmtNum(report.team.totalHours)],
+            ["Hoàn thành TB", `${report.team.avgPercent}%`],
             ["Đã nộp đánh giá", `${report.team.submittedCount}/${report.team.memberCount}`],
           ].map(([k, v]) => (
             <div key={k} className="rounded-xl bg-slate-50 px-3 py-2">
@@ -353,7 +353,6 @@ export default function ReportPage() {
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {[
-              ["Số giờ", `${fmtNum(current.stats.hours)}h`],
               ["Đầu việc", String(current.stats.logCount)],
               ["Hoàn thành TB", `${current.stats.avgPercent}%`],
               ["Có minh chứng", `${current.stats.evidenceRate}%`],

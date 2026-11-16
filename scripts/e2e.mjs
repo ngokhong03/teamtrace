@@ -42,17 +42,16 @@ const bad = await j(`/api/projects/${code}/state`, { s: { memberId: A.memberId, 
 assert(bad.status === 401, "token sai -> 401");
 
 const log = (s, o) => j(`/api/projects/${code}/logs`, { body: { category: "Nghiên cứu", workDate: today, ...o }, s });
-r = await log(A, { task: "Khảo sát đối thủ", description: "Khảo sát 5 đối thủ, lập bảng so sánh giá và kênh phân phối, rút ra 3 khoảng trống thị trường để định vị.", link: "https://docs.google.com/d/1", hours: 6, percent: 100 });
+r = await log(A, { task: "Khảo sát đối thủ", description: "Khảo sát 5 đối thủ, lập bảng so sánh giá và kênh phân phối, rút ra 3 khoảng trống thị trường để định vị.", link: "https://docs.google.com/d/1", percent: 100 });
 assert(r.status === 200, "log A1");
-r = await log(A, { task: "Slide", description: "Thiết kế 12 slide thuyết trình bằng Canva, thống nhất bộ nhận diện và biểu đồ.", link: "canva.com/design/x", category: "Thiết kế", hours: 5, percent: 90 });
+r = await log(A, { task: "Slide", description: "Thiết kế 12 slide thuyết trình bằng Canva, thống nhất bộ nhận diện và biểu đồ.", link: "canva.com/design/x", category: "Thiết kế", percent: 90 });
 assert(r.status === 200 && r.data.log.link.startsWith("https://"), "log A2 (tự thêm https)");
-r = await log(Bm, { task: "Viết nội dung", description: "Viết phần phân tích SWOT và đề xuất chiến lược, kèm số liệu nguồn Statista.", link: "https://docs.google.com/d/2", category: "Viết nội dung", hours: 4, percent: 80 });
+r = await log(Bm, { task: "Viết nội dung", description: "Viết phần phân tích SWOT và đề xuất chiến lược, kèm số liệu nguồn Statista.", link: "https://docs.google.com/d/2", category: "Viết nội dung", percent: 80 });
 assert(r.status === 200, "log B1");
-r = await log(C, { task: "Làm gì đó", description: "làm một chút việc", hours: 1, percent: 30 });
+r = await log(C, { task: "Làm gì đó", description: "làm một chút việc", percent: 30 });
 assert(r.status === 200, "log C1 (không link)");
-assert((await log(C, { task: "x", description: "ngắn", hours: 1, percent: 30 })).status === 400, "mô tả quá ngắn -> 400");
-assert((await log(C, { task: "xx", description: "mô tả đủ dài rồi nhé", hours: 99, percent: 30 })).status === 400, "giờ > 40 -> 400");
-const del = await log(C, { task: "Xoá thử", description: "việc để xoá thử nghiệm", hours: 1, percent: 10 });
+assert((await log(C, { task: "x", description: "ngắn", percent: 30 })).status === 400, "mô tả quá ngắn -> 400");
+const del = await log(C, { task: "Xoá thử", description: "việc để xoá thử nghiệm", percent: 10 });
 assert((await j(`/api/projects/${code}/logs/${del.data.log.id}`, { method: "DELETE", s: Bm })).status === 404, "không xoá được log người khác");
 assert((await j(`/api/projects/${code}/logs/${del.data.log.id}`, { method: "DELETE", s: C })).status === 200, "xoá log của mình");
 
@@ -143,16 +142,16 @@ const delAct = r.data.activities.find((a) => a.type === "log_deleted");
 assert(delAct && delAct.detail.task === "Xoá thử", "trưởng nhóm thấy công việc đã xoá kèm nội dung cũ");
 
 // ---- Đọc link minh chứng ----
-r = await log(A, { task: "Trang tham khảo", description: "Đọc tài liệu tham khảo về định dạng tên miền", link: "https://example.com", hours: 1, percent: 100 });
+r = await log(A, { task: "Trang tham khảo", description: "Đọc tài liệu tham khảo về định dạng tên miền", link: "https://example.com", percent: 100 });
 assert(r.status === 200 && ["ok", "limited"].includes(r.data.log.evidenceStatus), "đọc được link công khai: " + r.data.log.evidenceStatus);
 const evId = r.data.log.id;
 r = await j(`/api/projects/${code}/logs/${evId}`, { s: A });
 assert(r.status === 200 && /Example Domain/i.test(r.data.log.evidenceTitle + r.data.log.evidenceText), "người ghi xem được nội dung AI đọc");
 r = await j(`/api/projects/${code}/logs/${evId}`, { s: C });
 assert(r.status === 403, "thành viên khác không xem được nội dung minh chứng -> 403");
-r = await log(A, { task: "Link nội bộ", description: "thử link trỏ vào máy chủ nội bộ", link: "http://127.0.0.1/admin", hours: 1, percent: 10 });
+r = await log(A, { task: "Link nội bộ", description: "thử link trỏ vào máy chủ nội bộ", link: "http://127.0.0.1/admin", percent: 10 });
 assert(r.status === 200 && r.data.log.evidenceStatus === "error", "chặn link nội bộ (chống SSRF): " + r.data.log.evidenceStatus);
-r = await log(A, { task: "Link metadata", description: "thử link metadata của máy chủ đám mây", link: "http://169.254.169.254/latest/meta-data", hours: 1, percent: 10 });
+r = await log(A, { task: "Link metadata", description: "thử link metadata của máy chủ đám mây", link: "http://169.254.169.254/latest/meta-data", percent: 10 });
 assert(r.status === 200 && r.data.log.evidenceStatus === "error", "chặn địa chỉ metadata đám mây");
 r = await j(`/api/projects/${code}/logs/${evId}`, { method: "PATCH", body: { recheck: true }, s: C });
 assert(r.status === 403, "thành viên khác không đọc lại được link của người khác -> 403");

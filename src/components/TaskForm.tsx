@@ -13,7 +13,6 @@ const initial = () => ({
   description: "",
   link: "",
   category: "Nghiên cứu" as string,
-  hours: "1",
   percent: 100,
   workDate: todayISO(),
 });
@@ -31,7 +30,7 @@ export default function TaskForm({ onSaved }: { onSaved: () => void }) {
     setError("");
     setNotice(null);
     try {
-      const r = await api<{ log: WorkLog }>(`/api/projects/${code}/logs`, { session, body: { ...f, hours: Number(f.hours) } });
+      const r = await api<{ log: WorkLog }>(`/api/projects/${code}/logs`, { session, body: { ...f } });
       const st = r.log.evidenceStatus;
       setNotice(
         st === "ok"
@@ -89,18 +88,6 @@ export default function TaskForm({ onSaved }: { onSaved: () => void }) {
               <option key={c}>{c}</option>
             ))}
           </select>
-        </Field>
-        <Field label="Số giờ đã làm" required>
-          <input
-            type="number"
-            min={0.25}
-            max={40}
-            step={0.25}
-            className={inputCls}
-            value={f.hours}
-            onChange={(e) => setF({ ...f, hours: e.target.value })}
-            required
-          />
         </Field>
         <Field label="Ngày thực hiện" required>
           <input type="date" className={inputCls} value={f.workDate} max={todayISO()} onChange={(e) => setF({ ...f, workDate: e.target.value })} required />

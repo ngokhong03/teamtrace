@@ -145,9 +145,6 @@ export default function Timeline({
                     </div>
                     <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{l.description}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" /> {fmtNum(l.hours)} giờ
-                      </span>
                       <span className="inline-flex min-w-[130px] items-center gap-2">
                         <ProgressBar value={l.percent} className="w-20" color={l.percent >= 100 ? "bg-emerald-500" : "bg-indigo-500"} />
                         {l.percent}%

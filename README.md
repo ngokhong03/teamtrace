@@ -66,7 +66,7 @@ git push -u origin main
 2. **Thành viên** mở link (hoặc nhập mã) → nhập Tên + MSSV + **PIN 4–6 số tự đặt** → vào dự án. Vào lại trên máy khác bằng đúng MSSV + PIN.
 3. Trang **Tổng quan** hiện ngay mục **Nhiệm vụ của bạn**: chỉ **trưởng nhóm** giao việc (kèm hạn nộp); thành viên bấm Bắt đầu / Hoàn thành và **ghi chú** tiến độ vào nhiệm vụ của mình. Việc giao, đổi trạng thái và ghi chú hiện trên timeline.
    Theo mẫu *Progress Tracker* của nhóm: mỗi nhiệm vụ có **danh sách yêu cầu**, **người hỗ trợ**, **hạn nộp kèm giờ**, **link sản phẩm**; trưởng nhóm bấm **Duyệt** (Completed & Approved) hoặc **Yêu cầu sửa**. Thiết bị đã vào một lần sẽ được nhớ: trang chủ có mục **Dự án của bạn** để bấm vào lại, không cần nhập mã và PIN.
-4. Trong quá trình làm: tab **Ghi nhận** – điền đầu việc, mô tả, link minh chứng, số giờ, % hoàn thành. Hệ thống **tự đọc nội dung link** (Google Docs/Slides/Sheets khi bật “Bất kỳ ai có đường liên kết”, GitHub, trang web) để AI chấm; link riêng tư sẽ được báo để sửa rồi bấm “Đọc lại link”.
+4. Trong quá trình làm: tab **Ghi nhận** – điền đầu việc, mô tả, link minh chứng, % hoàn thành. Hệ thống **tự đọc nội dung link** (Google Docs/Slides/Sheets khi bật “Bất kỳ ai có đường liên kết”, GitHub, trang web) để AI chấm; link riêng tư sẽ được báo để sửa rồi bấm “Đọc lại link”.
    Trưởng nhóm có thêm tab **Lịch sử**: mọi thao tác của từng người (kể cả công việc đã xoá), mở link và xem nội dung AI đọc được.
 5. Cuối dự án: tab **Đánh giá** – trưởng nhóm chấm từng người theo **bảng tiêu chí 4 mức** (mẫu *Team leader's assessment*, sửa câu chữ trong `src/lib/rubric.ts`; không ẩn danh, không cộng vào Contribution Score); mọi thành viên – chấm 1–5 sao × 3 tiêu chí cho từng bạn + nhận xét (ẩn danh, chỉ nộp 1 lần).
 6. Tab **Báo cáo**: bảng xếp hạng, % đóng góp, radar, AI Insights; nút **Sao chép tóm tắt** / **In / Lưu PDF** để nộp kèm bài.
@@ -74,7 +74,7 @@ git push -u origin main
 ## Cách tính điểm (`src/lib/scoring.ts`)
 **Contribution Score = 40% WorkTrace + 40% Peer Review + 20% AI** (nếu chưa ai nộp đánh giá: 67% WorkTrace + 33% AI).
 
-- **WorkTrace (0–100)** = 55% khối lượng quy đổi (giờ × %hoàn thành, so với người làm nhiều nhất; việc thiếu link chỉ tính 60%) + 25% tỷ lệ việc có link minh chứng + 20% độ chi tiết của mô tả.
+- **WorkTrace (0–100)** = 55% khối lượng quy đổi (%hoàn thành mỗi việc, so với người làm nhiều nhất; việc thiếu link chỉ tính 60%) + 25% tỷ lệ việc có link minh chứng + 20% độ chi tiết của mô tả.
 - **Peer (0–100)** = trung bình 3 tiêu chí / 5 × 100, **điều chỉnh theo minh chứng**: người gần như không có minh chứng trên WorkTrace chỉ được tính tối đa 20% điểm Peer (tránh việc bạn bè chấm nể che lấp free-rider). Từ WorkTrace ≥ 60 thì tính đủ.
 - **AI (0–100)**: mặc định là thuật toán heuristic (độ chi tiết, tính đều đặn, chất lượng theo đồng đội, sắc thái nhận xét). Nếu có `ANTHROPIC_API_KEY`, trưởng nhóm bấm *Phân tích bằng Claude*; điểm Claude bị giới hạn lệch tối đa ±25 so với điểm heuristic để chống "dẫn dắt" bằng nội dung sinh viên nhập.
 - **% đóng góp** = điểm của từng người / tổng điểm cả nhóm. Ô "Điểm nhóm" trên trang Báo cáo quy đổi ra điểm cá nhân tham khảo (0,5–1,15 × điểm nhóm, tối đa 10).

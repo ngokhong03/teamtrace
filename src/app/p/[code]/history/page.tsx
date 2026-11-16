@@ -233,7 +233,7 @@ export default function HistoryPage() {
                     <div className="mt-2 text-sm text-slate-600">
                       <p className="whitespace-pre-line">{log.description}</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {fmtNum(log.hours)} giờ · hoàn thành {log.percent}% · ngày {log.workDate}
+                        hoàn thành {log.percent}% · ngày {log.workDate}
                       </p>
                       <EvidenceViewer log={log} />
                     </div>
@@ -248,7 +248,7 @@ export default function HistoryPage() {
                     <p className="font-semibold">Nội dung trước khi xoá</p>
                     {d.description && <p className="mt-1 whitespace-pre-line">{String(d.description)}</p>}
                     <p className="mt-1 text-xs">
-                      {d.hours ?? "?"} giờ · {d.percent ?? "?"}% · ngày {String(d.workDate ?? "?")}
+                      {d.percent ?? "?"}% · ngày {String(d.workDate ?? "?")}
                     </p>
                     {d.link && (
                       <a href={String(d.link)} target="_blank" rel="noopener noreferrer nofollow" className="mt-1 inline-flex items-center gap-1 text-xs font-semibold underline">

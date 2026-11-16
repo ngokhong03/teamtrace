@@ -204,8 +204,8 @@ export function buildReport(
 
   const totalHours = round1(metrics.reduce((s, m) => s + m.hours, 0));
   const logCount = metrics.reduce((s, m) => s + m.logCount, 0);
-  const avgPercent = totalHours
-    ? Math.round(metrics.reduce((s, m) => s + m.avgPercent * m.hours, 0) / totalHours)
+  const avgPercent = logCount
+    ? Math.round(metrics.reduce((s, m) => s + m.avgPercent * m.logCount, 0) / logCount)
     : 0;
 
   // 6) cảnh báo cho giảng viên / nhóm

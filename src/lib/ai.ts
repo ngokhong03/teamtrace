@@ -89,7 +89,7 @@ export function heuristicMemberInsight(a: {
   return {
     strengths,
     improvements,
-    comment: `${a.name} đóng góp khoảng ${a.share}% khối lượng của nhóm (${round1(m.hours)} giờ, ${m.logCount} đầu việc), xếp hạng ${a.rank}/${a.memberCount}.${peerPart}`,
+    comment: `${a.name} đóng góp khoảng ${a.share}% khối lượng của nhóm (${m.logCount} đầu việc), xếp hạng ${a.rank}/${a.memberCount}.${peerPart}`,
   };
 }
 
@@ -108,14 +108,13 @@ export function heuristicTeam(a: {
 }): { summary: string; progress: string } {
   const { metrics, project } = a;
   const logCount = metrics.reduce((s, m) => s + m.logCount, 0);
-  const hours = metrics.reduce((s, m) => s + m.hours, 0);
-  const wPercent = hours
-    ? metrics.reduce((s, m) => s + m.avgPercent * m.hours, 0) / hours
+  const wPercent = logCount
+    ? metrics.reduce((s, m) => s + m.avgPercent * m.logCount, 0) / logCount
     : 0;
   const dl = daysLeft(project.deadline);
   const dlText =
     dl === null ? "" : dl >= 0 ? ` Còn ${dl} ngày đến deadline.` : ` Đã quá deadline ${Math.abs(dl)} ngày.`;
-  const progress = `Nhóm đã ghi nhận ${logCount} đầu việc, tổng ${round1(hours)} giờ, mức hoàn thành trung bình ${Math.round(wPercent)}%.${dlText}`;
+  const progress = `Nhóm đã ghi nhận ${logCount} đầu việc, mức hoàn thành trung bình ${Math.round(wPercent)}%.${dlText}`;
 
   const entries = Object.entries(a.shares).sort((x, y) => y[1] - x[1]);
   let summary = "Chưa đủ dữ liệu để nhận xét về mức độ cân bằng đóng góp.";

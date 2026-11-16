@@ -31,13 +31,12 @@ export default function OverviewPage() {
   const [fallback, setFallback] = useState<string | null>(null);
   const nameOf = (id: string) => data.members.find((m) => m.id === id)?.name ?? "Thành viên";
 
-  const totalHours = data.logs.reduce((s, l) => s + l.hours, 0);
   const avgPct = data.logs.length ? Math.round(data.logs.reduce((s, l) => s + l.percent, 0) / data.logs.length) : 0;
 
   const chart = data.members.map((m) => {
     const mine = data.logs.filter((l) => l.memberId === m.id);
-    const effective = mine.reduce((s, l) => s + ((l.hours * l.percent) / 100) * (hasLink(l) ? 1 : 0.6), 0);
-    return { name: m.name, hours: mine.reduce((s, l) => s + l.hours, 0), effective: Math.round(effective * 10) / 10 };
+    const effective = mine.reduce((s, l) => s + (l.percent / 100) * (hasLink(l) ? 1 : 0.6), 0);
+    return { name: m.name, hours: mine.length, effective: Math.round(effective * 10) / 10 };
   });
 
   const link = typeof window !== "undefined" ? `${location.origin}/p/${code}` : "";
@@ -107,7 +106,7 @@ export default function OverviewPage() {
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat icon={Users} label="Thành viên" value={String(data.members.length)} sub={`${data.submittedCount}/${data.members.length} đã nộp đánh giá`} />
         <Stat icon={ClipboardList} label="Việc đã ghi nhận" value={String(data.logs.length)} sub={`${data.tasks.filter((t) => t.status === "done").length}/${data.tasks.length} nhiệm vụ xong`} />
-        <Stat icon={Clock} label="Tổng giờ làm" value={fmtNum(Math.round(totalHours * 10) / 10)} />
+        <Stat icon={Clock} label="Việc có minh chứng" value={`${data.logs.length ? Math.round((data.logs.filter(hasLink).length / data.logs.length) * 100) : 0}%`} />
         <Stat icon={Target} label="Hoàn thành TB" value={`${avgPct}%`} />
       </div>
 
@@ -117,13 +116,13 @@ export default function OverviewPage() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <h2 className="mb-3 font-semibold text-slate-900">Đóng góp theo giờ làm quy đổi</h2>
+          <h2 className="mb-3 font-semibold text-slate-900">Đóng góp quy đổi theo việc và % hoàn thành</h2>
           {data.logs.length ? (
             <HoursChart data={chart} />
           ) : (
             <p className="py-10 text-center text-sm text-slate-500">Chưa có dữ liệu. Hãy ghi nhận công việc đầu tiên!</p>
           )}
-          <p className="mt-2 text-xs text-slate-500">Giờ quy đổi = số giờ × % hoàn thành (việc thiếu minh chứng chỉ tính 60%).</p>
+          <p className="mt-2 text-xs text-slate-500">Mỗi đầu việc tính theo % hoàn thành (việc thiếu minh chứng chỉ tính 60%). Hệ thống không dùng số giờ tự khai.</p>
         </Card>
         <Card className="lg:col-span-2">
           <h2 className="mb-3 font-semibold text-slate-900">Thành viên</h2>

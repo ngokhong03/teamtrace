@@ -56,7 +56,7 @@ export interface MemberMetrics {
   memberId: string;
   logCount: number;
   hours: number;
-  /** Giờ quy đổi = giờ × %hoàn thành × (1 nếu có link minh chứng, 0.6 nếu không) */
+  /** Khối lượng quy đổi = %hoàn thành mỗi đầu việc × (1 nếu có link minh chứng, 0.6 nếu không) */
   effectiveHours: number;
   avgPercent: number;
   evidenceRate: number; // 0-100
@@ -85,7 +85,7 @@ export function computeMetrics(
   const base = members.map((m) => {
     const mine = logs.filter((l) => l.memberId === m.id);
     const n = mine.length;
-    const effectiveHours = sum(mine.map((l) => ((l.hours * l.percent) / 100) * (hasLink(l) ? 1 : 0.6)));
+    const effectiveHours = sum(mine.map((l) => (l.percent / 100) * (hasLink(l) ? 1 : 0.6)));
     const domains = new Set(mine.filter(hasLink).map((l) => domainOf(l.link)).filter(Boolean));
     return {
       memberId: m.id,

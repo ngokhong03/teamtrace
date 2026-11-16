@@ -34,7 +34,6 @@ export default function LogPage() {
     }
   }
   const mine = data.logs.filter((l) => l.memberId === data.me.id);
-  const hours = mine.reduce((s, l) => s + l.hours, 0);
 
   async function remove(l: WorkLog) {
     try {
@@ -57,7 +56,7 @@ export default function LogPage() {
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="font-semibold text-slate-900">Nhật ký của bạn</h2>
             <p className="text-sm text-slate-500">
-              {mine.length} việc · {Math.round(hours * 10) / 10} giờ
+              {mine.length} việc
             </p>
           </div>
           {error && (

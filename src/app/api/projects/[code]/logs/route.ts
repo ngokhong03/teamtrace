@@ -30,10 +30,7 @@ export const POST = route(async (req: Request, p: { code: string }) => {
     ? body.category
     : "Khác";
 
-  const hours = Number(body.hours);
-  if (!Number.isFinite(hours) || hours <= 0 || hours > 40) {
-    throw new HttpError(400, "Thời gian thực hiện phải từ 0.25 đến 40 giờ");
-  }
+  // Số giờ tự khai không còn được dùng (không kiểm chứng được) – luôn lưu 0.
   const percent = Number(body.percent);
   if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
     throw new HttpError(400, "% hoàn thành phải từ 0 đến 100");
@@ -55,7 +52,7 @@ export const POST = route(async (req: Request, p: { code: string }) => {
       description,
       link,
       category,
-      hours: Math.round(hours * 4) / 4,
+      hours: 0,
       percent: Math.round(percent),
       workDate,
       evidenceStatus: ev.status,

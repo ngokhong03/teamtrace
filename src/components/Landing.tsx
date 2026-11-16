@@ -45,7 +45,7 @@ const AUDIENCES = [
 
 const STEPS = [
   { icon: ClipboardList, title: "Tạo nhóm & giao việc", desc: "Trưởng nhóm tạo dự án, giao nhiệm vụ kèm hạn nộp. Thành viên vào bằng mã 6 số." },
-  { icon: FileBarChart, title: "Ghi nhận minh chứng", desc: "Mỗi người ghi lại việc đã làm, số giờ, % hoàn thành và link sản phẩm." },
+  { icon: FileBarChart, title: "Ghi nhận minh chứng", desc: "Mỗi người ghi lại việc đã làm, % hoàn thành và link sản phẩm." },
   { icon: EyeOff, title: "Đánh giá chéo ẩn danh", desc: "Chấm 3 tiêu chí cho từng đồng đội. Hệ thống không lưu ai chấm ai." },
   { icon: Sparkles, title: "Báo cáo & gợi ý cải thiện", desc: "Điểm đóng góp 0–100, biểu đồ 5 năng lực, điểm mạnh và việc cần cải thiện." },
 ];
