@@ -4,6 +4,26 @@ export interface Session {
   memberId: string;
   token: string;
   name: string;
+  /** Tên dự án + lần mở gần nhất: để trang chủ liệt kê "Dự án của bạn" */
+  projectName?: string;
+  lastOpenedAt?: number;
+}
+
+export interface SavedProject extends Session {
+  code: string;
+}
+
+/** Danh sách nhóm đã vào trên thiết bị này, mở gần nhất xếp trước. */
+export function listSessions(): SavedProject[] {
+  return Object.entries(readAll())
+    .map(([code, s]) => ({ code, ...s }))
+    .sort((a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0));
+}
+
+/** Cập nhật tên dự án + thời điểm mở gần nhất cho phiên đã lưu. */
+export function touchSession(code: string, patch: { projectName?: string }) {
+  const s = readAll()[code];
+  if (s) saveSession(code, { ...s, ...patch, lastOpenedAt: Date.now() });
 }
 
 const KEY = "teamtrace.sessions.v1";

@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import type { AiAnalysis, Member, Project, Review, Store, WorkLog } from "@/lib/types";
+import type { AiAnalysis, Member, Project, Review, Store, Task, WorkLog } from "@/lib/types";
 
 /**
  * Store lưu vào file JSON (.data/db.json) – dùng khi chạy local, không cần cài gì.
@@ -12,12 +12,13 @@ interface DB {
   projects: Project[];
   members: Member[];
   logs: WorkLog[];
+  tasks: Task[];
   reviews: Review[];
   submissions: { projectId: string; reviewerId: string }[];
 }
 
 const FILE = path.join(process.cwd(), ".data", "db.json");
-const empty = (): DB => ({ projects: [], members: [], logs: [], reviews: [], submissions: [] });
+const empty = (): DB => ({ projects: [], members: [], logs: [], tasks: [], reviews: [], submissions: [] });
 
 let queue: Promise<unknown> = Promise.resolve();
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -137,6 +138,42 @@ export function createFileStore(): Store {
           .filter((l) => l.projectId === projectId)
           .sort((a, b) => b.workDate.localeCompare(a.workDate) || b.createdAt.localeCompare(a.createdAt))
       ),
+
+    addTask: (projectId, input) =>
+      mutate((db) => {
+        const task: Task = {
+          id: randomUUID(),
+          projectId,
+          ...input,
+          status: "todo",
+          createdAt: new Date().toISOString(),
+          doneAt: null,
+        };
+        db.tasks.push(task);
+        return task;
+      }),
+
+    getTask: (projectId, taskId) =>
+      read((db) => db.tasks.find((t) => t.projectId === projectId && t.id === taskId) ?? null),
+
+    updateTask: (projectId, taskId, patch) =>
+      mutate((db) => {
+        const t = db.tasks.find((x) => x.projectId === projectId && x.id === taskId);
+        if (!t) return null;
+        Object.assign(t, patch);
+        if (patch.status) t.doneAt = patch.status === "done" ? new Date().toISOString() : null;
+        return { ...t };
+      }),
+
+    deleteTask: (projectId, taskId) =>
+      mutate((db) => {
+        const before = db.tasks.length;
+        db.tasks = db.tasks.filter((t) => !(t.projectId === projectId && t.id === taskId));
+        return db.tasks.length < before;
+      }),
+
+    listTasks: (projectId) =>
+      read((db) => db.tasks.filter((t) => t.projectId === projectId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
 
     submitReviews: (projectId, reviewerId, reviews) =>
       mutate((db) => {

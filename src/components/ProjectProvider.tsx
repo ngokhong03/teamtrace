@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { BarChart3 } from "lucide-react";
 import JoinForm from "./JoinForm";
 import { Alert, Card, Spinner } from "./ui";
-import { ApiError, api, clearSession, getSession, type Session } from "@/lib/client";
+import { ApiError, api, clearSession, getSession, touchSession, type Session } from "@/lib/client";
 import type { StateResponse } from "@/lib/types";
 
 interface Ctx {
@@ -39,6 +39,7 @@ export default function ProjectProvider({ code, children }: { code: string; chil
     async (s: Session) => {
       try {
         const d = await api<StateResponse>(`/api/projects/${code}/state`, { session: s });
+        touchSession(code, { projectName: d.project.name });
         setData(d);
         setPhase("ready");
       } catch (e) {

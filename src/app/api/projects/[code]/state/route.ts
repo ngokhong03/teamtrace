@@ -7,10 +7,11 @@ export const dynamic = "force-dynamic";
 export const GET = route(async (req: Request, ctx: { params: { code: string } }): Promise<StateResponse> => {
   const { project, member } = await authenticate(req, ctx.params.code);
   const store = getStore();
-  const [members, logs, submitted] = await Promise.all([
+  const [members, logs, submitted, tasks] = await Promise.all([
     store.listMembers(project.id),
     store.listLogs(project.id),
     store.listSubmitted(project.id),
+    store.listTasks(project.id),
   ]);
   const done = new Set(submitted);
   return {
@@ -36,5 +37,6 @@ export const GET = route(async (req: Request, ctx: { params: { code: string } })
       submitted: done.has(m.id),
     })),
     logs,
+    tasks,
   };
 });

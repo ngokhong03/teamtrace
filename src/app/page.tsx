@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BarChart3, EyeOff, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BarChart3, EyeOff, Sparkles, Users, X } from "lucide-react";
 import CreateProjectForm from "@/components/CreateProjectForm";
-import { Alert, Button, Card, inputCls } from "@/components/ui";
+import { Alert, Avatar, Button, Card, inputCls } from "@/components/ui";
+import { clearSession, listSessions, type SavedProject } from "@/lib/client";
 
 export default function Home() {
   const router = useRouter();
   const [tab, setTab] = useState<"join" | "create">("join");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState<SavedProject[]>([]);
+
+  // Đọc localStorage sau khi mount (tránh lệch giữa server và client)
+  useEffect(() => setSaved(listSessions()), []);
 
   function join(e: React.FormEvent) {
     e.preventDefault();
@@ -64,6 +70,44 @@ export default function Home() {
           </ul>
         </section>
 
+        <div className="space-y-4">
+        {saved.length > 0 && (
+          <Card className="p-4 sm:p-5">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Dự án của bạn trên thiết bị này</h2>
+            <ul className="space-y-2">
+              {saved.map((s) => (
+                <li key={s.code} className="flex items-center gap-2">
+                  <Link
+                    href={`/p/${s.code}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 transition hover:border-indigo-300 hover:bg-indigo-50/50"
+                  >
+                    <Avatar name={s.name} size={34} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-slate-900">
+                        {s.projectName ?? `Nhóm ${s.code}`}
+                      </span>
+                      <span className="block truncate text-xs text-slate-500">
+                        Mã <span className="font-mono">{s.code}</span> · vào với tên {s.name}
+                      </span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-indigo-500" />
+                  </Link>
+                  <button
+                    aria-label="Xoá nhóm khỏi thiết bị này"
+                    title="Xoá khỏi thiết bị này (cần nhập lại mã và PIN khi vào lại)"
+                    onClick={() => {
+                      clearSession(s.code);
+                      setSaved(listSessions());
+                    }}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
         <Card className="p-5 sm:p-6">
           <div className="mb-5 grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
             {(
@@ -111,6 +155,7 @@ export default function Home() {
             <CreateProjectForm />
           )}
         </Card>
+        </div>
       </div>
     </main>
   );

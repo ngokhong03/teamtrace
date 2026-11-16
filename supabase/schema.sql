@@ -68,3 +68,19 @@ alter table members enable row level security;
 alter table work_logs enable row level security;
 alter table review_submissions enable row level security;
 alter table reviews enable row level security;
+
+-- Nhiệm vụ được giao (xem migrations/002_tasks.sql)
+create table if not exists tasks (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  title text not null,
+  description text not null default '',
+  assignee_id uuid not null references members(id) on delete cascade,
+  created_by uuid references members(id) on delete set null,
+  due_date date,
+  status text not null default 'todo' check (status in ('todo', 'doing', 'done')),
+  created_at timestamptz not null default now(),
+  done_at timestamptz
+);
+create index if not exists tasks_project_idx on tasks(project_id);
+alter table tasks enable row level security;

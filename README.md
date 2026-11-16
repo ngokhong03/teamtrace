@@ -31,7 +31,7 @@ Mở http://localhost:3000. Khi chưa có biến môi trường Supabase, app t�
    
    ⚠️ `service_role` là khóa bí mật, chỉ dán vào Vercel, **không** commit lên GitHub, không gửi vào nhóm chat.
 
-> **Đã deploy bản cũ (trước khi có PIN)?** Chạy thêm file [`supabase/migrations/001_pin.sql`](supabase/migrations/001_pin.sql) trong SQL Editor **trước** khi push bản mới. Tài khoản cũ chưa có PIN sẽ nhận PIN đầu tiên họ nhập khi vào lại.
+> **Đã deploy bản cũ (trước khi có PIN)?** Chạy thêm các file trong [`supabase/migrations/`](supabase/migrations) theo thứ tự (`001_pin.sql` rồi `002_tasks.sql`) trong SQL Editor **trước** khi push bản mới. Tài khoản cũ chưa có PIN sẽ nhận PIN đầu tiên họ nhập khi vào lại.
 
 ### Bước 2 – Đưa code lên GitHub (3 phút)
 ```bash
@@ -64,9 +64,10 @@ git push -u origin main
 ## Luồng sử dụng cho sinh viên
 1. **Trưởng nhóm** vào trang chủ → *Tạo nhóm mới* (tên dự án, môn, deadline, tên + MSSV) → nhận **mã 6 số** và link mời.
 2. **Thành viên** mở link (hoặc nhập mã) → nhập Tên + MSSV + **PIN 4–6 số tự đặt** → vào dự án. Vào lại trên máy khác bằng đúng MSSV + PIN.
-3. Trong quá trình làm: tab **Ghi nhận** – điền đầu việc, mô tả, link minh chứng (Docs/Canva/Slides/GitHub…), số giờ, % hoàn thành.
-4. Cuối dự án: tab **Đánh giá** – chấm 1–5 sao × 3 tiêu chí cho từng bạn + nhận xét (ẩn danh, chỉ nộp 1 lần).
-5. Tab **Báo cáo**: bảng xếp hạng, % đóng góp, radar, AI Insights; nút **Sao chép tóm tắt** / **In / Lưu PDF** để nộp kèm bài.
+3. Trang **Tổng quan** hiện ngay mục **Nhiệm vụ của bạn**: trưởng nhóm giao việc (kèm hạn nộp) cho từng người, thành viên cũng có thể **tự nhận việc**; mỗi người bấm Bắt đầu / Hoàn thành. Thiết bị đã vào một lần sẽ được nhớ: trang chủ có mục **Dự án của bạn** để bấm vào lại, không cần nhập mã và PIN.
+4. Trong quá trình làm: tab **Ghi nhận** – điền đầu việc, mô tả, link minh chứng (Docs/Canva/Slides/GitHub…), số giờ, % hoàn thành.
+5. Cuối dự án: tab **Đánh giá** – chấm 1–5 sao × 3 tiêu chí cho từng bạn + nhận xét (ẩn danh, chỉ nộp 1 lần).
+6. Tab **Báo cáo**: bảng xếp hạng, % đóng góp, radar, AI Insights; nút **Sao chép tóm tắt** / **In / Lưu PDF** để nộp kèm bài.
 
 ## Cách tính điểm (`src/lib/scoring.ts`)
 **Contribution Score = 40% WorkTrace + 40% Peer Review + 20% AI** (nếu chưa ai nộp đánh giá: 67% WorkTrace + 33% AI).

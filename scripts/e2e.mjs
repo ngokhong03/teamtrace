@@ -94,6 +94,38 @@ assert(an.status === 403, "member thường không chạy được AI -> 403");
 const an2 = await j(`/api/projects/${code}/analyze`, { method: "POST", body: {}, s: A });
 assert(an2.status === 400, "leader chạy AI khi chưa có key -> 400 thông báo rõ: " + an2.data.error);
 
+// ---- Giao việc ----
+const tk = (path = "", o = {}) => j(`/api/projects/${code}/tasks${path}`, o);
+r = await tk("", { body: { title: "Khảo sát sinh viên", description: "50 bạn", assigneeId: Bm.memberId, dueDate: dl }, s: A });
+assert(r.status === 200 && r.data.task.status === "todo" && r.data.task.assigneeId === Bm.memberId, "trưởng nhóm giao việc cho B");
+const tid = r.data.task.id;
+r = await tk("", { body: { title: "Giao bậy", assigneeId: A.memberId }, s: Bm });
+assert(r.status === 403, "thành viên thường giao việc cho người khác -> 403");
+r = await tk("", { body: { title: "Tự nhận việc" }, s: Bm });
+assert(r.status === 200 && r.data.task.assigneeId === Bm.memberId, "thành viên tự nhận việc cho chính mình");
+const selfTid = r.data.task.id;
+r = await tk("", { body: { title: "Người lạ", assigneeId: "00000000-0000-0000-0000-000000000000" }, s: A });
+assert(r.status === 400, "giao cho người không thuộc nhóm -> 400");
+r = await tk("/" + tid, { method: "PATCH", body: { status: "doing" }, s: C });
+assert(r.status === 403, "người không được giao đổi trạng thái -> 403");
+r = await tk("/" + tid, { method: "PATCH", body: { status: "bay" }, s: Bm });
+assert(r.status === 400, "trạng thái không hợp lệ -> 400");
+r = await tk("/" + tid, { method: "PATCH", body: { status: "doing" }, s: Bm });
+assert(r.status === 200 && r.data.task.status === "doing", "người được giao bắt đầu làm");
+r = await tk("/" + tid, { method: "PATCH", body: { status: "done" }, s: Bm });
+assert(r.status === 200 && r.data.task.status === "done" && r.data.task.doneAt, "người được giao hoàn thành (có doneAt)");
+r = await tk("/" + tid, { method: "PATCH", body: { title: "Sửa lén" }, s: Bm });
+assert(r.status === 403, "người được giao không sửa được tên việc do trưởng nhóm tạo -> 403");
+r = await tk("/" + tid, { method: "PATCH", body: { assigneeId: C.memberId }, s: Bm });
+assert(r.status === 403, "thành viên thường đổi người được giao -> 403");
+r = await tk("/" + tid, { method: "PATCH", body: { assigneeId: C.memberId, title: "Khảo sát 50 sinh viên" }, s: A });
+assert(r.status === 200 && r.data.task.assigneeId === C.memberId, "trưởng nhóm đổi người được giao + sửa tên");
+r = await tk("/" + tid, { method: "DELETE", s: Bm });
+assert(r.status === 403, "không phải trưởng nhóm/người tạo xoá việc -> 403");
+r = await tk("/" + selfTid, { method: "DELETE", s: Bm });
+assert(r.status === 200, "người tạo xoá việc tự nhận của mình");
+r = await j(`/api/projects/${code}/state`, { s: C });
+assert(r.data.tasks.length === 1 && r.data.tasks[0].assigneeId === C.memberId, "state trả đúng danh sách nhiệm vụ cho C: " + r.data.tasks.map((t) => t.title).join(","));
 // ---- Khoá sau 5 lần sai (dùng riêng tài khoản D, đặt cuối) ----
 let last;
 for (let i = 0; i < 5; i++) last = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "0000" } });

@@ -6,6 +6,7 @@ import { CalendarClock, CheckCircle2, ClipboardList, Clock, Copy, Share2, Target
 import { useProject } from "@/components/ProjectProvider";
 import Timeline from "@/components/Timeline";
 import HoursChart from "@/components/HoursChart";
+import { MyTasksCard, TeamTasksCard } from "@/components/Tasks";
 import { Alert, Avatar, Badge, Button, Card, PageTitle } from "@/components/ui";
 import { fmtNum, formatDate } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Users; label: st
 export default function OverviewPage() {
   const { code, data } = useProject();
   const [copied, setCopied] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const nameOf = (id: string) => data.members.find((m) => m.id === id)?.name ?? "Thành viên";
 
   const totalHours = data.logs.reduce((s, l) => s + l.hours, 0);
@@ -48,7 +50,16 @@ export default function OverviewPage() {
 
   return (
     <>
-      <PageTitle title="Tổng quan dự án" desc="Theo dõi hoạt động của cả nhóm theo thời gian thực." />
+      <PageTitle title={`Xin chào, ${data.me.name}`} desc={`Tổng quan dự án “${data.project.name}” – theo dõi hoạt động cả nhóm theo thời gian thực.`} />
+
+      <div className="mb-4">
+        <MyTasksCard
+          onAdd={() => {
+            setFormOpen(true);
+            setTimeout(() => document.getElementById("team-tasks")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+          }}
+        />
+      </div>
 
       {!data.me.submitted && data.members.length > 1 && (
         <div className="mb-4">
@@ -91,6 +102,10 @@ export default function OverviewPage() {
         <Stat icon={ClipboardList} label="Đầu việc" value={String(data.logs.length)} />
         <Stat icon={Clock} label="Tổng giờ làm" value={fmtNum(Math.round(totalHours * 10) / 10)} />
         <Stat icon={Target} label="Hoàn thành TB" value={`${avgPct}%`} />
+      </div>
+
+      <div className="mt-4">
+        <TeamTasksCard formOpen={formOpen} setFormOpen={setFormOpen} />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-5">

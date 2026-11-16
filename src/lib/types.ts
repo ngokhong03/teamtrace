@@ -58,6 +58,36 @@ export interface WorkLog {
   createdAt: string;
 }
 
+export const TASK_STATUSES = ["todo", "doing", "done"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "Chưa làm",
+  doing: "Đang làm",
+  done: "Hoàn thành",
+};
+
+/** Nhiệm vụ được giao cho một thành viên. */
+export interface Task {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  createdBy: string;
+  dueDate: string; // yyyy-mm-dd hoặc ""
+  status: TaskStatus;
+  createdAt: string;
+  doneAt: string | null;
+}
+export type NewTask = Pick<Task, "title" | "description" | "assigneeId" | "createdBy" | "dueDate">;
+export interface TaskPatch {
+  title?: string;
+  description?: string;
+  assigneeId?: string;
+  dueDate?: string;
+  status?: TaskStatus;
+}
+
 /** Đánh giá chéo – KHÔNG có trường người chấm (ẩn danh ở tầng dữ liệu). */
 export interface Review {
   id: string;
@@ -104,6 +134,12 @@ export interface Store {
   deleteLog(projectId: string, logId: string, memberId: string): Promise<boolean>;
   listLogs(projectId: string): Promise<WorkLog[]>;
 
+  addTask(projectId: string, input: NewTask): Promise<Task>;
+  getTask(projectId: string, taskId: string): Promise<Task | null>;
+  updateTask(projectId: string, taskId: string, patch: TaskPatch): Promise<Task | null>;
+  deleteTask(projectId: string, taskId: string): Promise<boolean>;
+  listTasks(projectId: string): Promise<Task[]>;
+
   /** false nếu người này đã nộp đánh giá trước đó */
   submitReviews(projectId: string, reviewerId: string, reviews: NewReview[]): Promise<boolean>;
   listSubmitted(projectId: string): Promise<string[]>;
@@ -125,6 +161,7 @@ export interface StateResponse {
   me: { id: string; name: string; studentId: string; isLeader: boolean; submitted: boolean };
   members: PublicMember[];
   logs: WorkLog[];
+  tasks: Task[];
 }
 
 export const RADAR_KEYS = ["initiative", "depth", "punctuality", "creativity", "support"] as const;

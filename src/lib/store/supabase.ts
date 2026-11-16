@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
-import type { AiAnalysis, Member, Project, Review, Store, WorkLog } from "@/lib/types";
+import type { AiAnalysis, Member, Project, Review, Store, Task, WorkLog } from "@/lib/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -44,6 +44,19 @@ const toLog = (r: any): WorkLog => ({
   percent: Number(r.percent),
   workDate: r.work_date,
   createdAt: r.created_at,
+});
+
+const toTask = (r: any): Task => ({
+  id: r.id,
+  projectId: r.project_id,
+  title: r.title,
+  description: r.description ?? "",
+  assigneeId: r.assignee_id,
+  createdBy: r.created_by ?? r.assignee_id,
+  dueDate: r.due_date ?? "",
+  status: r.status,
+  createdAt: r.created_at,
+  doneAt: r.done_at ?? null,
 });
 
 const toReview = (r: any): Review => ({
@@ -173,6 +186,62 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
         .order("work_date", { ascending: false })
         .order("created_at", { ascending: false });
       return (check(res, "listLogs") as any[]).map(toLog);
+    },
+
+    async addTask(projectId, input) {
+      const res = await db
+        .from("tasks")
+        .insert({
+          project_id: projectId,
+          title: input.title,
+          description: input.description,
+          assignee_id: input.assigneeId,
+          created_by: input.createdBy,
+          due_date: input.dueDate || null,
+        })
+        .select()
+        .single();
+      return toTask(check(res, "addTask"));
+    },
+
+    async getTask(projectId, taskId) {
+      if (!/^[0-9a-f-]{36}$/i.test(taskId)) return null;
+      const res = await db.from("tasks").select("*").eq("project_id", projectId).eq("id", taskId).maybeSingle();
+      const row = check(res, "getTask");
+      return row ? toTask(row) : null;
+    },
+
+    async updateTask(projectId, taskId, patch) {
+      if (!/^[0-9a-f-]{36}$/i.test(taskId)) return null;
+      const row: Record<string, unknown> = {};
+      if (patch.title !== undefined) row.title = patch.title;
+      if (patch.description !== undefined) row.description = patch.description;
+      if (patch.assigneeId !== undefined) row.assignee_id = patch.assigneeId;
+      if (patch.dueDate !== undefined) row.due_date = patch.dueDate || null;
+      if (patch.status !== undefined) {
+        row.status = patch.status;
+        row.done_at = patch.status === "done" ? new Date().toISOString() : null;
+      }
+      const res = await db
+        .from("tasks")
+        .update(row)
+        .eq("project_id", projectId)
+        .eq("id", taskId)
+        .select()
+        .maybeSingle();
+      const out = check(res, "updateTask");
+      return out ? toTask(out) : null;
+    },
+
+    async deleteTask(projectId, taskId) {
+      if (!/^[0-9a-f-]{36}$/i.test(taskId)) return false;
+      const res = await db.from("tasks").delete().eq("project_id", projectId).eq("id", taskId).select("id");
+      return (check(res, "deleteTask") as any[]).length > 0;
+    },
+
+    async listTasks(projectId) {
+      const res = await db.from("tasks").select("*").eq("project_id", projectId).order("created_at");
+      return (check(res, "listTasks") as any[]).map(toTask);
     },
 
     async submitReviews(projectId, reviewerId, reviews) {
