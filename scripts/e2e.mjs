@@ -83,7 +83,10 @@ assert(Math.abs(share - 100) < 0.5, "tổng % đóng góp ≈ 100 (" + share.toF
 assert(R.members.every((m) => m.total >= 0 && m.total <= 100), "điểm trong 0-100");
 const me = R.members.find((m) => m.id === ids.C);
 assert(Array.isArray(me.comments) && me.comments.length === 1, "C thấy 1 nhận xét ẩn danh của chính mình: " + JSON.stringify(me.comments));
-assert(R.members.filter((m) => m.id !== ids.C).every((m) => m.comments === null), "không lộ nhận xét của người khác");
+const bRep = R.members.find((m) => m.id === ids.B);
+assert(bRep.comments.includes("làm rất tốt, nhiệt tình"), "thành viên khác (C) đọc được nhận xét ẩn danh về B");
+const leak = JSON.stringify(R.members.map((m) => m.comments));
+assert(!/Minh Anh|Anh Thư|Gia Huy|Bảo Ngọc|K6500/.test(leak) && R.members.every((m) => m.comments.every((c) => typeof c === "string")), "nhận xét không kèm tên/MSSV người viết");
 assert(R.members.find((m) => m.id === ids.D).stats.logCount === 0 && R.members.find((m) => m.id === ids.D).flags.length > 0, "D không có log -> bị flag");
 assert(R.warnings.length > 0, "có cảnh báo (chưa đủ người nộp): " + R.warnings[0]);
 assert(R.ai.source === "heuristic" && R.ai.available === false, "AI heuristic, chưa có API key");

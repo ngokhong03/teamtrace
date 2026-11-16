@@ -83,7 +83,7 @@ git push -u origin main
 
 ## Ẩn danh hoạt động thế nào
 - Bảng `reviews` **không có cột người chấm và không có timestamp**; bảng `review_submissions` chỉ ghi "ai đã nộp" để chống nộp 2 lần. Không thể truy ngược ai chấm ai, kể cả khi xem trực tiếp database.
-- Nhận xét văn bản chỉ hiển thị cho **chính người được nhận xét** (kể cả trưởng nhóm cũng không xem được nhận xét về người khác) và được xáo thứ tự.
+- Nhận xét văn bản hiển thị cho **mọi thành viên** trong trang Báo cáo nhưng **không kèm người viết** (kể cả người được nhận xét cũng không biết ai viết), được xáo thứ tự.
 - Hạn chế thực tế: nhóm ≤ 3 người dễ đoán ra người chấm – app có cảnh báo.
 - Khi gọi Claude, tên thật được thay bằng "Thành viên A, B, C…".
 

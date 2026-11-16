@@ -178,8 +178,9 @@ export function buildReport(
       },
       insight,
       flags,
-      // Nhận xét thô chỉ trả về cho chính người được nhận xét
-      comments: mem.id === viewerId ? comments[mem.id] ?? [] : null,
+      // Nhận xét ẩn danh: mọi thành viên đều đọc được, không ai biết người viết
+      // (hệ thống không lưu người chấm; thứ tự đã được xáo trộn)
+      comments: comments[mem.id] ?? [],
     };
   });
 

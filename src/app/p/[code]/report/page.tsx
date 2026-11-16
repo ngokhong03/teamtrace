@@ -376,11 +376,12 @@ export default function ReportPage() {
         </Card>
       </div>
 
-      {/* Nhận xét ẩn danh nhận được (chỉ của chính mình) */}
-      {current.id === report.me.id && (
+      {/* Nhận xét ẩn danh về thành viên đang chọn – ai cũng xem được, không biết người viết */}
+      {(
         <Card className="no-print mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-semibold text-slate-900">
-            <MessageSquareQuote className="h-5 w-5 text-indigo-500" /> Nhận xét ẩn danh bạn nhận được
+            <MessageSquareQuote className="h-5 w-5 text-indigo-500" />{" "}
+            {current.id === report.me.id ? "Nhận xét ẩn danh về bạn" : `Nhận xét ẩn danh về ${current.name}`}
           </h2>
           {current.comments && current.comments.length ? (
             <ul className="space-y-2">
@@ -391,7 +392,7 @@ export default function ReportPage() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">Chưa có nhận xét bằng văn bản nào. Nhận xét chỉ hiển thị cho chính người được nhận xét.</p>
+            <p className="text-sm text-slate-500">Chưa có nhận xét bằng văn bản nào. Nhận xét được hiển thị ẩn danh – không ai biết người viết, kể cả người được nhận xét.</p>
           )}
         </Card>
       )}

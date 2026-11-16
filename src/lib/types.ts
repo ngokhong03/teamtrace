@@ -271,8 +271,8 @@ export interface MemberReport {
   };
   insight: { strengths: string[]; improvements: string[]; comment: string };
   flags: string[];
-  /** Nhận xét ẩn danh nhận được – chỉ trả về cho chính người đó */
-  comments: string[] | null;
+  /** Nhận xét ẩn danh về người này – mọi thành viên đều xem được, không kèm người viết */
+  comments: string[];
 }
 
 export interface ReportResponse {
