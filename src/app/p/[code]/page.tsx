@@ -31,7 +31,8 @@ export default function OverviewPage() {
   const [fallback, setFallback] = useState<string | null>(null);
   const nameOf = (id: string) => data.members.find((m) => m.id === id)?.name ?? "Thành viên";
 
-  const avgPct = data.logs.length ? Math.round(data.logs.reduce((s, l) => s + l.percent, 0) / data.logs.length) : 0;
+  const approvedTasks = data.tasks.filter((t) => t.status === "done" && t.approval === "approved").length;
+  const approvedPct = data.tasks.length ? Math.round((approvedTasks / data.tasks.length) * 100) : 0;
 
   const chart = data.members.map((m) => {
     const mine = data.logs.filter((l) => l.memberId === m.id);
@@ -107,7 +108,7 @@ export default function OverviewPage() {
         <Stat icon={Users} label="Thành viên" value={String(data.members.length)} sub={`${data.submittedCount}/${data.members.length} đã nộp đánh giá`} />
         <Stat icon={ClipboardList} label="Việc đã ghi nhận" value={String(data.logs.length)} sub={`${data.tasks.filter((t) => t.status === "done").length}/${data.tasks.length} nhiệm vụ xong`} />
         <Stat icon={Clock} label="Việc có minh chứng" value={`${data.logs.length ? Math.round((data.logs.filter(hasLink).length / data.logs.length) * 100) : 0}%`} />
-        <Stat icon={Target} label="Hoàn thành TB" value={`${avgPct}%`} />
+        <Stat icon={Target} label="Nhiệm vụ đã duyệt" value={`${approvedPct}%`} sub={data.tasks.length ? `${approvedTasks}/${data.tasks.length} nhiệm vụ` : "Chưa giao nhiệm vụ"} />
       </div>
 
       <div className="mt-4">
