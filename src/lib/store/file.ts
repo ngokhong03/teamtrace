@@ -199,6 +199,14 @@ export function createFileStore(): Store {
           .slice(0, limit)
       ),
 
+    updateLog: (projectId, logId, patch, ev) =>
+      mutate((db) => {
+        const l = db.logs.find((x) => x.projectId === projectId && x.id === logId);
+        if (!l) return;
+        Object.assign(l, patch);
+        if (ev) Object.assign(l, { evidenceStatus: ev.status, evidenceTitle: ev.title, evidenceText: ev.text, evidenceExcerpt: excerpt(ev.text) });
+      }),
+
     deleteLog: (projectId, logId, memberId) =>
       mutate((db) => {
         const before = db.logs.length;

@@ -1,5 +1,6 @@
 import { getStore } from "@/lib/store";
-import { HttpError, authenticate, readJson, route } from "@/lib/http";
+import { HttpError, authenticate, isoDate, readJson, route, str, text } from "@/lib/http";
+import { CATEGORIES, type LogPatch } from "@/lib/types";
 import { readEvidence } from "@/lib/evidence";
 import { record } from "@/lib/activity";
 
@@ -19,14 +20,67 @@ export const GET = route(async (req: Request, p: P) => {
   return { log };
 });
 
-/** Đọc lại link minh chứng (ví dụ sau khi đã bật chia sẻ): người ghi hoặc trưởng nhóm. */
+/**
+ * - { recheck: true }: đọc lại link minh chứng (người ghi hoặc trưởng nhóm).
+ * - Sửa nội dung (tên, mô tả, link, loại, %, ngày): chỉ người ghi. Đổi link thì đọc lại minh chứng.
+ */
 export const PATCH = route(async (req: Request, p: P) => {
   const { project, member } = await authenticate(req, p.code);
   const store = getStore();
   const body = await readJson(req);
-  if (body.recheck !== true) throw new HttpError(400, "Không có gì để cập nhật");
   const log = await store.getLog(project.id, p.id);
   if (!log) throw new HttpError(404, "Không tìm thấy công việc");
+
+  if (body.recheck !== true) {
+    if (log.memberId !== member.id) throw new HttpError(403, "Chỉ người ghi nhận mới sửa được công việc này");
+    const patch: LogPatch = {};
+    if (body.task !== undefined) patch.task = str(body.task, "Tên đầu việc", { min: 2, max: 150 });
+    if (body.description !== undefined) patch.description = text(body.description, "Mô tả", { min: 10, max: 1500 });
+    if (body.category !== undefined) {
+      patch.category = (CATEGORIES as readonly string[]).includes(String(body.category)) ? String(body.category) : "Khác";
+    }
+    if (body.percent !== undefined) {
+      const percent = Number(body.percent);
+      if (!Number.isFinite(percent) || percent < 0 || percent > 100) throw new HttpError(400, "% hoàn thành phải từ 0 đến 100");
+      patch.percent = Math.round(percent);
+    }
+    if (body.workDate !== undefined) {
+      const workDate = isoDate(body.workDate, "Ngày thực hiện");
+      const diffDays = (Date.parse(workDate) - Date.now()) / 86_400_000;
+      if (diffDays > 1 || diffDays < -60) throw new HttpError(400, "Ngày thực hiện không hợp lệ");
+      patch.workDate = workDate;
+    }
+    let ev;
+    if (body.link !== undefined) {
+      const link = typeof body.link === "string" ? body.link.trim() : "";
+      if (link && !/^https?:\/\//i.test(link)) throw new HttpError(400, "Link minh chứng phải bắt đầu bằng http:// hoặc https://");
+      if (link.length > 500) throw new HttpError(400, "Link quá dài");
+      if (link !== log.link) {
+        patch.link = link;
+        ev = await readEvidence(link);
+      }
+    }
+    if (!Object.keys(patch).length) throw new HttpError(400, "Không có gì để cập nhật");
+    await store.updateLog(project.id, log.id, patch, ev);
+    await record(store, {
+      projectId: project.id,
+      actorId: member.id,
+      type: "log_added",
+      taskId: null,
+      logId: log.id,
+      summary: `sửa công việc: ${patch.task ?? log.task}`,
+      detail: {
+        edited: true,
+        before: { task: log.task, description: log.description.slice(0, 500), link: log.link, percent: log.percent },
+        task: patch.task ?? log.task,
+        link: patch.link ?? log.link,
+        percent: patch.percent ?? log.percent,
+      },
+    });
+    const updated = await store.getLog(project.id, log.id);
+    return { log: updated ? { ...updated, evidenceText: undefined } : null };
+  }
+
   if (log.memberId !== member.id && !member.isLeader) {
     throw new HttpError(403, "Chỉ trưởng nhóm hoặc người ghi nhận mới đọc lại được link");
   }

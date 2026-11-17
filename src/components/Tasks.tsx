@@ -203,13 +203,18 @@ function MyTaskItem({ t, role }: { t: Task; role: "owner" | "support" }) {
               )}
               {t.status !== "done" && (
                 <Link
-                  href={`/p/${code}/log`}
+                  href={`/p/${code}/log?task=${t.id}`}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <Plus className="h-4 w-4" /> Ghi nhận công việc
                 </Link>
               )}
             </div>
+          )}
+          {t.status !== "done" && !finishing && (
+            <p className="text-xs text-slate-500">
+              “Ghi nhận công việc” = nhật ký từng phần đã làm. Làm xong cả nhiệm vụ thì bấm <b>Hoàn thành</b> để nộp cho trưởng nhóm duyệt.
+            </p>
           )}
           {error && <Alert tone="error">{error}</Alert>}
         </div>
@@ -502,7 +507,6 @@ function DueEditor({ t }: { t: Task }) {
 export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; setFormOpen: (v: boolean) => void }) {
   const { data } = useProject();
   const { busyId, error, remove, review } = useTaskActions();
-  const { armed, arm } = useArmed();
   const isLeader = data.me.isLeader;
 
   const total = data.tasks.length;
@@ -568,27 +572,23 @@ export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; se
                           <Badge tone={st.tone} className="shrink-0">
                             {st.label}
                           </Badge>
-                          {canDelete &&
-                            (armed === t.id ? (
-                              <button
-                                onClick={() => {
-                                  arm(null);
+                          {canDelete && (
+                            <button
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Xoá nhiệm vụ “${t.title}” của ${m.name}?\n\nNhiệm vụ sẽ biến mất khỏi bảng phân công. Trưởng nhóm có thể khôi phục lại trong tab Lịch sử.`
+                                  )
+                                )
                                   remove(t);
-                                }}
-                                className="shrink-0 rounded bg-rose-600 px-2 py-0.5 text-xs font-semibold text-white hover:bg-rose-700"
-                              >
-                                Xoá?
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => arm(t.id)}
-                                disabled={busyId === t.id}
-                                aria-label="Xoá nhiệm vụ"
-                                className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            ))}
+                              }}
+                              disabled={busyId === t.id}
+                              aria-label={`Xoá nhiệm vụ ${t.title}`}
+                              className="ml-1 rounded p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                         <div className="ml-7 mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           <span className={due.tone === "rose" ? "font-semibold text-rose-600" : ""}>{due.label}</span>

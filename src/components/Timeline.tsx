@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ClipboardList, Clock, ExternalLink, FileSearch, MessageSquare, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { CheckCircle2, ClipboardList, Clock, ExternalLink, FileSearch, MessageSquare, Pencil, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { Avatar, Badge, ProgressBar, useArmed } from "./ui";
 import { dayLabel, domainOf, fmtNum, timeAgo } from "@/lib/utils";
 import { EVIDENCE_LABELS, type Activity, type EvidenceStatus, type WorkLog } from "@/lib/types";
@@ -46,6 +46,7 @@ export default function Timeline({
   nameOf,
   meId,
   onDelete,
+  onEdit,
   onRecheck,
   recheckingId,
   emptyText = "Chưa có hoạt động nào.",
@@ -55,6 +56,8 @@ export default function Timeline({
   nameOf: (id: string) => string;
   meId?: string;
   onDelete?: (log: WorkLog) => void;
+  /** Sửa công việc của chính mình */
+  onEdit?: (log: WorkLog) => void;
   /** Đọc lại link minh chứng (hiện cho log của chính mình khi chưa đọc được) */
   onRecheck?: (log: WorkLog) => void;
   recheckingId?: string | null;
@@ -121,6 +124,15 @@ export default function Timeline({
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Badge tone="indigo">{l.category}</Badge>
+                        {onEdit && mine && (
+                          <button
+                            onClick={() => onEdit(l)}
+                            aria-label="Sửa công việc"
+                            className="rounded-md p-1 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
                         {onDelete && mine &&
                           (armed === l.id ? (
                             <button

@@ -134,6 +134,8 @@ export const DELETE = route(async (req: Request, p: Ctx) => {
   if (!member.isLeader && task.createdBy !== member.id) {
     throw new HttpError(403, "Chỉ trưởng nhóm hoặc người tạo việc mới được xoá nhiệm vụ");
   }
+  // Lưu bản sao đầy đủ (kể cả ghi chú) để trưởng nhóm khôi phục được nếu xoá nhầm
+  const notes = (await store.listNotes(project.id)).filter((n) => n.taskId === task.id).slice(0, 100);
   await store.deleteTask(project.id, task.id);
   await record(store, {
     projectId: project.id,
@@ -142,7 +144,24 @@ export const DELETE = route(async (req: Request, p: Ctx) => {
     taskId: task.id,
     logId: null,
     summary: `xoá nhiệm vụ “${task.title}”`,
-    detail: { title: task.title, assigneeId: task.assigneeId },
+    detail: {
+      title: task.title,
+      assigneeId: task.assigneeId,
+      snapshot: {
+        title: task.title,
+        description: task.description,
+        assigneeId: task.assigneeId,
+        createdBy: task.createdBy,
+        dueDate: task.dueDate,
+        dueTime: task.dueTime,
+        requirements: task.requirements,
+        supporterIds: task.supporterIds,
+        status: task.status,
+        productLink: task.productLink,
+        approval: task.approval,
+      },
+      notes: notes.map((n) => ({ memberId: n.memberId, content: n.content })),
+    },
   });
   return { ok: true };
 });

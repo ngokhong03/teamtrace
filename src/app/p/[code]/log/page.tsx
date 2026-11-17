@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProject } from "@/components/ProjectProvider";
 import TaskForm from "@/components/TaskForm";
 import AdSlot from "@/components/AdSlot";
@@ -14,6 +14,19 @@ export default function LogPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [rechecking, setRechecking] = useState<string | null>(null);
+  const [editing, setEditing] = useState<WorkLog | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Mở từ nút "Ghi nhận công việc" của một nhiệm vụ: /p/<code>/log?task=<id>
+  useEffect(() => {
+    setTaskId(new URLSearchParams(window.location.search).get("task"));
+  }, []);
+  const forTask = data.tasks.find((t) => t.id === taskId && (t.assigneeId === data.me.id || t.supporterIds.includes(data.me.id))) ?? null;
+  function clearTask() {
+    setTaskId(null);
+    window.history.replaceState(null, "", window.location.pathname);
+  }
 
   async function recheck(l: WorkLog) {
     setRechecking(l.id);
@@ -49,8 +62,10 @@ export default function LogPage() {
       <PageTitle title="Ghi nhận đóng góp (WorkTrace)" desc="Ghi lại những gì bạn đã làm kèm minh chứng – đây là căn cứ chính để tính điểm đóng góp." />
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-2 lg:sticky lg:top-32 lg:self-start">
-          <h2 className="mb-4 font-semibold text-slate-900">Thêm công việc mới</h2>
-          <TaskForm onSaved={refresh} />
+          <div ref={formRef} className="scroll-mt-32">
+            <h2 className="mb-4 font-semibold text-slate-900">{editing ? "Sửa công việc" : "Thêm công việc mới"}</h2>
+            <TaskForm onSaved={refresh} editing={editing} onCancelEdit={() => setEditing(null)} forTask={forTask} onClearTask={clearTask} />
+          </div>
         </Card>
         <div className="lg:col-span-3">
           <div className="mb-3 flex items-baseline justify-between">
@@ -74,6 +89,10 @@ export default function LogPage() {
             nameOf={() => data.me.name}
             meId={data.me.id}
             onDelete={remove}
+            onEdit={(l) => {
+              setEditing(l);
+              formRef.current?.scrollIntoView({ behavior: "smooth" });
+            }}
             onRecheck={recheck}
             recheckingId={rechecking}
             emptyText="Bạn chưa ghi nhận công việc nào. Hãy điền form bên cạnh."

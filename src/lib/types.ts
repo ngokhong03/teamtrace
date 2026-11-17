@@ -149,6 +149,14 @@ export interface Task {
   approvedAt: string | null;
 }
 export type TaskApproval = "none" | "approved" | "revise";
+export interface LogPatch {
+  task?: string;
+  description?: string;
+  link?: string;
+  category?: string;
+  percent?: number;
+  workDate?: string;
+}
 export type NewTask = Pick<
   Task,
   "title" | "description" | "assigneeId" | "createdBy" | "dueDate" | "dueTime" | "requirements" | "supporterIds"
@@ -222,6 +230,7 @@ export interface Store {
   getLog(projectId: string, logId: string): Promise<(WorkLog & { evidenceText: string }) | null>;
   updateLogEvidence(projectId: string, logId: string, ev: Evidence): Promise<void>;
   deleteLog(projectId: string, logId: string, memberId: string): Promise<boolean>;
+  updateLog(projectId: string, logId: string, patch: LogPatch, ev?: Evidence): Promise<void>;
   listLogs(projectId: string): Promise<WorkLog[]>;
   /** Toàn văn nội dung minh chứng đọc được (cho AI) */
   listEvidenceTexts(projectId: string): Promise<{ logId: string; text: string }[]>;

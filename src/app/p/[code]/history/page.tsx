@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, FileSearch, History, Lock, RefreshCw, Trash2 } from "lucide-react";
+import { ExternalLink, FileSearch, History, Lock, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useProject } from "@/components/ProjectProvider";
 import { EvidenceBadge } from "@/components/Timeline";
 import { Alert, Avatar, Badge, Button, Card, PageTitle, inputCls } from "@/components/ui";
@@ -100,6 +100,40 @@ function EvidenceViewer({ log }: { log: WorkLog }) {
         <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 font-sans text-xs text-slate-700">
           {text}
         </pre>
+      )}
+      {error && <Alert tone="error">{error}</Alert>}
+    </div>
+  );
+}
+
+function RestoreTask({ activity, restored }: { activity: Activity; restored: boolean }) {
+  const { code, session, refresh } = useProject();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (restored) return <p className="mt-2 text-xs font-semibold text-emerald-700">Đã khôi phục</p>;
+  return (
+    <div className="mt-2">
+      <Button
+        size="sm"
+        variant="secondary"
+        loading={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            await api(`/api/projects/${code}/tasks/restore`, { session, body: { activityId: activity.id } });
+            await refresh();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Không khôi phục được");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <RotateCcw className="h-4 w-4" /> Khôi phục nhiệm vụ
+      </Button>
+      {!(activity.detail as Record<string, unknown>).snapshot && (
+        <p className="mt-1 text-xs text-slate-500">Nhiệm vụ xoá trước khi có tính năng sao lưu: chỉ khôi phục được tên và người phụ trách (trạng thái “Chưa làm”).</p>
       )}
       {error && <Alert tone="error">{error}</Alert>}
     </div>
@@ -242,6 +276,10 @@ export default function HistoryPage() {
                       <Trash2 className="h-3.5 w-3.5" /> Công việc này đã bị xoá sau đó
                     </p>
                   ))}
+
+                {a.type === "task_deleted" && (
+                  <RestoreTask activity={a} restored={data.activities.some((x) => (x.detail as Record<string, unknown>)?.restoredFrom === a.id)} />
+                )}
 
                 {a.type === "log_deleted" && (
                   <div className="mt-2 rounded-lg bg-rose-50 p-2.5 text-sm text-rose-900">

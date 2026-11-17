@@ -280,6 +280,25 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
       return (check(res, "listActivities") as any[]).map(toActivity);
     },
 
+    async updateLog(projectId, logId, patch, ev) {
+      const row: Record<string, unknown> = {};
+      if (patch.task !== undefined) row.task = patch.task;
+      if (patch.description !== undefined) row.description = patch.description;
+      if (patch.link !== undefined) row.link = patch.link;
+      if (patch.category !== undefined) row.category = patch.category;
+      if (patch.percent !== undefined) row.percent = patch.percent;
+      if (patch.workDate !== undefined) row.work_date = patch.workDate;
+      if (ev) {
+        row.evidence_status = ev.status;
+        row.evidence_title = ev.title;
+        row.evidence_excerpt = excerpt(ev.text);
+        row.evidence_text = ev.text;
+      }
+      if (!Object.keys(row).length) return;
+      const res = await db.from("work_logs").update(row).eq("project_id", projectId).eq("id", logId);
+      check({ data: true, error: res.error }, "updateLog");
+    },
+
     async deleteLog(projectId, logId, memberId) {
       if (!/^[0-9a-f-]{36}$/i.test(logId)) return false;
       const res = await db

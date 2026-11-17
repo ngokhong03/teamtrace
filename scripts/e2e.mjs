@@ -145,6 +145,38 @@ r = await j(`/api/projects/${code}/state`, { s: A });
 const delAct = r.data.activities.find((a) => a.type === "log_deleted");
 assert(delAct && delAct.detail.task === "Xoá thử", "trưởng nhóm thấy công việc đã xoá kèm nội dung cũ");
 
+// ---- Xoá nhầm nhiệm vụ -> trưởng nhóm khôi phục ----
+r = await tk("", { body: { title: "Việc sẽ xoá nhầm", assigneeId: Bm.memberId, requirements: "a\nb", dueDate: dl, dueTime: "21:00" }, s: A });
+const tmpId = r.data.task.id;
+await tk("/" + tmpId, { method: "PATCH", body: { status: "doing" }, s: Bm });
+await j(`/api/projects/${code}/tasks/${tmpId}/notes`, { body: { content: "ghi chú trước khi xoá" }, s: Bm });
+r = await tk("/" + tmpId, { method: "DELETE", s: A });
+assert(r.status === 200, "trưởng nhóm xoá nhiệm vụ");
+r = await j(`/api/projects/${code}/state`, { s: A });
+const tdel = r.data.activities.find((a) => a.type === "task_deleted" && a.detail.title === "Việc sẽ xoá nhầm");
+assert(tdel && tdel.detail.snapshot && tdel.detail.notes.length === 1, "lịch sử lưu bản sao nhiệm vụ + ghi chú khi xoá");
+r = await tk("/restore", { body: { activityId: tdel.id }, s: Bm });
+assert(r.status === 403, "thành viên không khôi phục được -> 403");
+r = await tk("/restore", { body: { activityId: tdel.id }, s: A });
+assert(r.status === 200 && r.data.task.title === "Việc sẽ xoá nhầm" && r.data.task.status === "doing" && r.data.task.requirements.length === 2 && r.data.task.dueTime === "21:00", "khôi phục đúng tên, trạng thái, yêu cầu, hạn");
+const restoredId = r.data.task.id;
+r = await tk("/restore", { body: { activityId: tdel.id }, s: A });
+assert(r.status === 409, "không khôi phục 2 lần -> 409");
+r = await j(`/api/projects/${code}/state`, { s: A });
+assert(r.data.notes.some((n) => n.taskId === restoredId && n.content === "ghi chú trước khi xoá"), "ghi chú được khôi phục theo");
+await tk("/" + restoredId, { method: "DELETE", s: A });
+
+// ---- Sửa công việc đã ghi nhận (gộp 2 lần ghi) ----
+r = await log(D, { task: "Phần 1", description: "Làm phần đầu của bài thuyết trình nhóm", percent: 50 });
+const editId = r.data.log.id;
+r = await j(`/api/projects/${code}/logs/${editId}`, { method: "PATCH", body: { task: "Sửa lén" }, s: Bm });
+assert(r.status === 403, "sửa công việc của người khác -> 403");
+r = await j(`/api/projects/${code}/logs/${editId}`, { method: "PATCH", body: { task: "Cả bài", description: "Gộp cả 2 phần của bài thuyết trình nhóm", percent: 100 }, s: D });
+assert(r.status === 200 && r.data.log.percent === 100 && r.data.log.task === "Cả bài", "sửa công việc của mình");
+r = await j(`/api/projects/${code}/logs/${editId}`, { method: "PATCH", body: { percent: 150 }, s: D });
+assert(r.status === 400, "sửa % ngoài 0–100 -> 400");
+await j(`/api/projects/${code}/logs/${editId}`, { method: "DELETE", s: D });
+
 // ---- Đọc link minh chứng ----
 r = await log(A, { task: "Trang tham khảo", description: "Đọc tài liệu tham khảo về định dạng tên miền", link: "https://example.com", percent: 100 });
 assert(r.status === 200 && ["ok", "limited"].includes(r.data.log.evidenceStatus), "đọc được link công khai: " + r.data.log.evidenceStatus);
