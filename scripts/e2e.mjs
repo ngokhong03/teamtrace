@@ -247,3 +247,19 @@ assert(last.status === 429, "sai 5 lần -> khoá 429: " + last.data.error);
 r = await j(`/api/projects/${code}/join`, { body: { name: "Bảo Ngọc", studentId: "K65004", pin: "1234" } });
 assert(r.status === 429, "đang khoá: đúng PIN vẫn bị chặn");
 console.log("CODE", code);
+
+// ---- Chống chia nhỏ một việc thành nhiều log để tăng điểm ----
+{
+  const dl2 = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
+  const p = await j("/api/projects", { body: { name: "[TEST] xoá được", course: "x", deadline: dl2, leaderName: "Chia Nhỏ", leaderStudentId: "K66001", leaderPin: "1234" } });
+  const code2 = p.data.code;
+  const L = { memberId: p.data.memberId, token: p.data.token };
+  const o = (await j(`/api/projects/${code2}/join`, { body: { name: "Làm Trọn", studentId: "K66002", pin: "1234" } })).data;
+  const mk = (s, o2) => j(`/api/projects/${code2}/logs`, { body: { category: "Nghiên cứu", workDate: today, link: "https://example.com", description: "mô tả đủ dài để hợp lệ nhé", ...o2 }, s });
+  await mk(L, { task: "Làm slide", percent: 100 });
+  await mk(L, { task: "làm  Slide", percent: 60 });
+  await mk(o, { task: "Soạn kịch bản", percent: 100 });
+  const rp = await j(`/api/projects/${code2}/report`, { s: L });
+  const eff = Object.fromEntries(rp.data.members.map((m) => [m.name, m.stats.effectiveHours]));
+  assert(eff["Chia Nhỏ"] === 1 && eff["Làm Trọn"] === 1, "chia 1 việc thành 2 log không tăng khối lượng: " + JSON.stringify(eff));
+}

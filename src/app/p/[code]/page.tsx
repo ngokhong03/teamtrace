@@ -9,7 +9,7 @@ import HoursChart from "@/components/HoursChart";
 import { MyTasksCard, TeamTasksCard } from "@/components/Tasks";
 import AdSlot from "@/components/AdSlot";
 import { Alert, Avatar, Badge, Button, Card, CopyFallback, PageTitle, copyText } from "@/components/ui";
-import { hasLink } from "@/lib/scoring";
+import { hasLink, taskUnits } from "@/lib/scoring";
 import { fmtNum, formatDate } from "@/lib/utils";
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub?: string }) {
@@ -35,7 +35,7 @@ export default function OverviewPage() {
 
   const chart = data.members.map((m) => {
     const mine = data.logs.filter((l) => l.memberId === m.id);
-    const effective = mine.reduce((s, l) => s + (l.percent / 100) * (hasLink(l) ? 1 : 0.6), 0);
+    const effective = taskUnits(mine).units;
     return { name: m.name, hours: mine.length, effective: Math.round(effective * 10) / 10 };
   });
 

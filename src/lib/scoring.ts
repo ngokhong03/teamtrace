@@ -76,6 +76,28 @@ export interface MemberMetrics {
   peerScore: number | null; // 0-100
 }
 
+/** Chuẩn hoá tên đầu việc để gom các log cùng một việc (bỏ hoa/thường, dấu cách thừa). */
+const taskKey = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Gom log theo đầu việc: nhiều lần ghi nhận cùng một việc chỉ được tính tối đa 100% cho việc đó
+ * (chia 1 việc thành 2 log 100% + 60% không làm tăng khối lượng). Việc có ít nhất một link mới tính đủ,
+ * không có link nào thì chỉ tính 60%.
+ */
+export function taskUnits(mine: WorkLog[]): { units: number; tasks: number } {
+  const groups = new Map<string, WorkLog[]>();
+  for (const l of mine) {
+    const k = taskKey(l.task);
+    groups.set(k, [...(groups.get(k) ?? []), l]);
+  }
+  let units = 0;
+  for (const g of groups.values()) {
+    const pct = Math.min(100, sum(g.map((l) => l.percent)));
+    units += (pct / 100) * (g.some(hasLink) ? 1 : 0.6);
+  }
+  return { units, tasks: groups.size };
+}
+
 export function computeMetrics(
   project: Pick<Project, "deadline">,
   members: Pick<Member, "id">[],
@@ -85,11 +107,12 @@ export function computeMetrics(
   const base = members.map((m) => {
     const mine = logs.filter((l) => l.memberId === m.id);
     const n = mine.length;
-    const effectiveHours = sum(mine.map((l) => (l.percent / 100) * (hasLink(l) ? 1 : 0.6)));
+    const { units: effectiveHours, tasks } = taskUnits(mine);
     const domains = new Set(mine.filter(hasLink).map((l) => domainOf(l.link)).filter(Boolean));
     return {
       memberId: m.id,
       n,
+      tasks,
       hours: sum(mine.map((l) => l.hours)),
       effectiveHours,
       avgPercent: n ? mean(mine.map((l) => l.percent)) : 0,
@@ -110,13 +133,13 @@ export function computeMetrics(
   });
 
   const maxEff = Math.max(0, ...base.map((b) => b.effectiveHours));
-  const maxN = Math.max(0, ...base.map((b) => b.n));
+  const maxN = Math.max(0, ...base.map((b) => b.tasks));
   const maxDays = Math.max(0, ...base.map((b) => b.activeDays));
 
   return base.map((b) => {
     const volume = maxEff > 0 ? (b.effectiveHours / maxEff) * 100 : 0;
     const activityScore =
-      maxN > 0 && maxDays > 0 ? (0.5 * (b.n / maxN) + 0.5 * (b.activeDays / maxDays)) * 100 : 0;
+      maxN > 0 && maxDays > 0 ? (0.5 * (b.tasks / maxN) + 0.5 * (b.activeDays / maxDays)) * 100 : 0;
     const workScore = b.n === 0 ? 0 : 0.55 * volume + 0.25 * b.evidenceRate + 0.2 * b.detailScore;
 
     const got = reviews.filter((r) => r.revieweeId === b.memberId);

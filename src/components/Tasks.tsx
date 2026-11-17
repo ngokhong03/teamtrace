@@ -507,6 +507,7 @@ function DueEditor({ t }: { t: Task }) {
 export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; setFormOpen: (v: boolean) => void }) {
   const { data } = useProject();
   const { busyId, error, remove, review } = useTaskActions();
+  const { armed, arm } = useArmed();
   const isLeader = data.me.isLeader;
 
   const total = data.tasks.length;
@@ -572,23 +573,27 @@ export function TeamTasksCard({ formOpen, setFormOpen }: { formOpen: boolean; se
                           <Badge tone={st.tone} className="shrink-0">
                             {st.label}
                           </Badge>
-                          {canDelete && (
-                            <button
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Xoá nhiệm vụ “${t.title}” của ${m.name}?\n\nNhiệm vụ sẽ biến mất khỏi bảng phân công. Trưởng nhóm có thể khôi phục lại trong tab Lịch sử.`
-                                  )
-                                )
+                          {canDelete &&
+                            (armed === t.id ? (
+                              <button
+                                onClick={() => {
+                                  arm(null);
                                   remove(t);
-                              }}
-                              disabled={busyId === t.id}
-                              aria-label={`Xoá nhiệm vụ ${t.title}`}
-                              className="ml-1 rounded p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
+                                }}
+                                className="ml-1 shrink-0 rounded bg-rose-600 px-2 py-0.5 text-xs font-semibold text-white hover:bg-rose-700"
+                              >
+                                Bấm lần nữa để xoá
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => arm(t.id)}
+                                disabled={busyId === t.id}
+                                aria-label={`Xoá nhiệm vụ ${t.title}`}
+                                className="ml-1 rounded p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            ))}
                         </div>
                         <div className="ml-7 mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           <span className={due.tone === "rose" ? "font-semibold text-rose-600" : ""}>{due.label}</span>
