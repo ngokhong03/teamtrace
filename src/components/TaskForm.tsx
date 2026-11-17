@@ -57,7 +57,9 @@ export default function TaskForm({
     } else {
       setF(initial());
     }
-  }, [editing, forTask]);
+  // Chỉ khởi tạo lại khi đổi nhiệm vụ / việc đang sửa (không phải mỗi lần dữ liệu nhóm tự làm mới)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.id, forTask?.id]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +95,7 @@ export default function TaskForm({
               ? { tone: "warn", text: "Đã ghi nhận, nhưng link đang để riêng tư nên AI không đọc được. Hãy bật chia sẻ “Bất kỳ ai có đường liên kết” rồi bấm “Đọc lại link” ở nhật ký." }
               : { tone: "warn", text: `Đã ghi nhận. ${EVIDENCE_LABELS[st]} – AI chỉ chấm được phần mô tả.` }
       );
-      setF(initial());
+      setF(forTask && !submitted ? { ...initial(), task: forTask.title } : initial());
       if (submitted) onClearTask?.();
       onSaved();
     } catch (err) {
